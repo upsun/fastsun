@@ -1,11 +1,13 @@
 <script setup lang="ts">
-// import TheWelcome from '../components/TheWelcome.vue'
+import { ref } from 'vue'
 import AclCard from '../components/acls/AclCard.vue';
+
+const vcl_version = ref(11)
 
 </script>
 
 <template>
   <main>
-    <AclCard />
+    <AclCard :vcl_version="vcl_version" :service_id="service_id" />
   </main>
 </template>

@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --port 8080",
     "build": "run-p type-check \"build-only {@}\" --",
     "preview": "vite preview",
     "test:unit": "vitest",
@@ -16,11 +16,12 @@
     "format": "prettier --write src/"
   },
   "dependencies": {
+    "@primevue/themes": "^4.2.5",
     "axios": "^1.7.9",
-    "pinia": "^2.2.6",
+    "primeicons": "^7.0.0",
+    "primevue": "^4.2.5",
     "vue": "^3.5.13",
-    "vue-router": "^4.4.5",
-    "vue3-easy-data-table": "^1.5.47"
+    "vue-router": "^4.4.5"
   },
   "devDependencies": {
     "@tsconfig/node22": "^22.0.0",
@@ -42,7 +43,7 @@
     "prettier": "^3.3.3",
     "typescript": "~5.6.3",
     "vite": "^6.0.1",
-    "vite-plugin-vue-devtools": "^7.6.5",
+    "vite-plugin-vue-devtools": "^7.6.8",
     "vitest": "^2.1.5",
     "vue-tsc": "^2.1.10"
   }

@@ -1,18 +1,17 @@
 import axios, { type AxiosInstance } from "axios";
 
-const FASTLY_API_SERVICE="xxxxxx";
-const FASTLY_API_TOKEN="xxxxx";
-
 export type APIResponse = [null, null] | [Error];
 
 export default class AclAPIService {
   private wsClient: AxiosInstance;
+  private service_id: String
 
-  constructor() {
+  constructor(service_id: String, token: String) {
+    this.service_id = service_id;
     this.wsClient = axios.create({
       baseURL: 'https://api.fastly.com/service/',
       headers: {
-        'Fastly-Key': FASTLY_API_TOKEN,
+        'Fastly-Key': token,
         'Accept': 'application/json'
       }
     });
@@ -21,9 +20,9 @@ export default class AclAPIService {
   /**
    *
    */
-  async getACL(version: number) {
+  async getACL(version: Number) {
     try  {
-      const {data} = await this.wsClient.get(`${FASTLY_API_SERVICE}/version/${version}/acl`);
+      const {data} = await this.wsClient.get(`${this.service_id}/version/${version}/acl`);
       return [null, data];
     } catch (error) {
       console.error(error);
@@ -37,7 +36,7 @@ export default class AclAPIService {
    */
   async getACLEntry(acl_id: string) {
     try {
-      const data = await this.wsClient.get(`${FASTLY_API_SERVICE}/acl/${acl_id}/entries`);
+      const data = await this.wsClient.get(`${this.service_id}/acl/${acl_id}/entries`);
       return [null, data];
     } catch (error) {
       console.error(error);
