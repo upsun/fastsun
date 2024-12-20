@@ -1,9 +1,11 @@
 import './assets/main.css';
 
-import { createApp } from 'vue';
+import { createApp, provide } from 'vue';
 
 import Aura from '@primevue/themes/aura';
 import PrimeVue from 'primevue/config';
+import Button from "primevue/button"
+import Card from 'primevue/card';
 import ConfirmationService from 'primevue/confirmationservice';
 import ToastService from "primevue/toastservice";
 
@@ -19,7 +21,12 @@ const app = createApp(App)
   })
   .use(ToastService)
   .use(ConfirmationService)
-  // .component('Button', Button)
-  // .component('Datable', DataTable)
+  .component('Card', Card)
+  .component('Button', Button)
+  // @see https://vuejs.org/guide/components/provide-inject
+  .provide("FASTLY_API_TOKEN", import.meta.env.VITE_FASTLY_API_TOKEN)
+  .provide("FASTLY_API_SERVICE", import.meta.env.VITE_FASTLY_API_SERVICE)
   .mount('#app');
+
+
 

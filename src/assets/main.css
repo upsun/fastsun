@@ -12,6 +12,21 @@
   font-weight: normal;
 }
 
+body {
+  display: flex;
+  /* place-items: center; */
+  background-color: rgb(242, 243, 244);
+
+}
+
+.flex {
+  display: flex;
+}
+
+.flex-wrap {
+  flex-wrap: wrap;
+}
+
 /* a,
 .green {
   text-decoration: none;

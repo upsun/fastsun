@@ -1,15 +1,15 @@
 <script setup lang="ts">
-import { ref, watchEffect } from 'vue'
+import { inject, ref, watchEffect } from 'vue'
+import { useToast } from 'primevue/usetoast';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
-import ColumnGroup from 'primevue/columngroup';   // optional
-import Row from 'primevue/row';                   // optional
-import Button from "primevue/button"
+import Button from "primevue/button";
 import ConfirmDialog from 'primevue/confirmdialog';
-
 import AclAPIService from '@/components/acls/acl.api';
 
+const FASTLY_API_TOKEN = inject('FASTLY_API_TOKEN') as String;
 
+const toast = useToast();
 const props = defineProps({
   service_id: String,
   vcl_version: Number
@@ -18,21 +18,25 @@ const props = defineProps({
 const acls = ref([]);
 
 watchEffect(async () => {
-  const aclService = new AclAPIService(props.service_id, FASTLY_API_TOKEN);
-  const [error, data] = await aclService.getACL(props.vcl_version)
+  const aclService = new AclAPIService(props.service_id!, FASTLY_API_TOKEN);
+  const [error, data] = await aclService.getACL(props.vcl_version!);
 
   if (error) console.error(error);
-  else acls.value = data
+  else acls.value = data;
 
   acls.value.forEach(acl => {
-    console.log(acl)
+    console.log(acl);
   })
 
   acls.value.forEach( async (acl) => {
-    const [error, data] = await aclService.getACLEntry(acl.id)
+    const [error, data] = await aclService.getACLEntry(acl.id);
 
-    if (error) console.error(error);
-    else acl.entries = data;
+    if (error) {
+      console.error(error);
+      toast.add({ severity: 'error', summary: 'Error', detail: error, life: 1000 });
+    } else {
+      acl.entries = data;
+    }
   });
 })
 
@@ -59,6 +63,9 @@ function onRowCollapse() {}
 </script>
 
 <template>
+  <Card>
+    <template #title v-if="false">Acces Control List</template>
+    <template #content>
   <!-- <Button label="Click me" /> -->
   <!-- <li v-for="acl in acls" :key="acl.id">
     {{ acl.name }}<br />
@@ -84,7 +91,7 @@ function onRowCollapse() {}
 
         resizableColumns columnResizeMode="fit"
 
-        sortField="id" :sortOrder="-1"
+        sortField="updated_at" :sortOrder="-1"
 
         :paginator="true" :rows="5" :rowsPerPageOptions="[5, 10, 20, 50]"
         paginatorTemplate="RowsPerPageDropdown FirstPageLink PrevPageLink CurrentPageReport NextPageLink LastPageLink"
@@ -111,7 +118,8 @@ function onRowCollapse() {}
     </template>
     <template #header>
       <div class="flex flex-wrap gap-2 items-center justify-between">
-            <h4 class="m-0">Manage Products</h4>
+            <h4 class="m-0" style="display: inline-flex;">Manage ACL</h4>
+            <Button label="Add" icon="pi pi-plus" size="small" class="mr-2" style="margin-left: auto;" @click="AddAcl()" />
             <!-- <IconField>
                 <InputIcon>
                     <i class="pi pi-search" />
@@ -133,11 +141,11 @@ function onRowCollapse() {}
     <template #loading> Loading ACLs data. Please wait. </template>
     <!-- <Column selectionMode="multiple" headerStyle="width: 3rem"></Column> -->
     <!-- <Column expander style="width: 5rem" /> -->
-    <Column field="id" header="ID" sortable style="width: 25%"></Column>
+    <!-- <Column field="id" header="ID" sortable style="width: 25%"></Column> -->
     <Column field="name" header="Name" sortable></Column>
     <Column field="created_at" header="Created at" sortable></Column>
     <Column field="updated_at" header="Updated at" sortable></Column>
-    <Column :exportable="false" style="min-width: 12rem">
+    <Column :exportable="false" style="min-width: 12rem" header="Actions">
         <template #body="slotProps">
             <Button icon="pi pi-pencil" outlined rounded class="mr-2" @click="editAcl(slotProps.data)" />
             <Button icon="pi pi-trash" outlined rounded severity="danger" @click="confirmDeleteAcl(slotProps.data)" />
@@ -170,4 +178,6 @@ function onRowCollapse() {}
         </div>
     </template> -->
   </DataTable>
+  </template>
+  </Card>
 </template>
