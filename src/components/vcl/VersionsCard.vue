@@ -3,7 +3,8 @@ import { inject, ref, toRaw, watchEffect } from 'vue';
 import { useToast } from 'primevue/usetoast';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
-import Button from "primevue/button"
+import Dialog from 'primevue/dialog';
+import Button from "primevue/button";
 import VclAPIService from './vcl.api';
 
 // Init
@@ -15,6 +16,8 @@ const props = defineProps({
 
 // Data
 const versions = ref([]);
+const vclContent = ref("");
+const vclDisplay = ref(false)
 function refresh() {
   console.log("Refresh Version History!");
   const vclService = new VclAPIService(props.service_id!, FASTLY_API_TOKEN);
@@ -36,6 +39,20 @@ function refresh() {
   });
 };
 watchEffect(refresh);
+
+function showVCL(data: any) {
+  const vclService = new VclAPIService(props.service_id!, FASTLY_API_TOKEN);
+  vclService.getVCL(data.number)
+  .catch(error => {
+    console.error(error);
+    toast.add({ severity: 'error', summary: 'Error', detail: error, life: 3000 });
+  })
+  .then(result => {
+    const [error, data] = result;
+    vclContent.value = data.content;
+    vclDisplay.value = true;
+  });
+}
 </script>
 
 <template>
@@ -76,13 +93,29 @@ watchEffect(refresh);
         <Column field="comment" header="Comment" sortable style="width: 30%" />
         <Column field="created_at" header="Created at" sortable style="width: 10%" />
         <Column field="updated_at" header="Updated at" sortable style="width: 10%" />
-        <!-- <Column :exportable="false" style="min-width: 12rem">
+        <Column :exportable="false" style="min-width: 12rem">
             <template #body="slotProps">
-                <Button icon="pi pi-pencil" outlined rounded class="mr-2" @click="editAcl(slotProps.data)" />
-                <Button icon="pi pi-trash" v-if="false" outlined rounded severity="danger" @click="confirmDeleteAcl(slotProps.data)" />
+                <Button icon="pi pi-search" outlined rounded class="mr-2" @click="showVCL(slotProps.data)" />
+                <!-- <Button icon="pi pi-pencil" outlined rounded class="mr-2" @click="editVCL(slotProps.data)" />
+                <Button icon="pi pi-trash" v-if="false" outlined rounded severity="danger" @click="confirmDeleteVCL(slotProps.data)" /> -->
             </template>
-        </Column> -->
+        </Column>
       </DataTable>
     </template>
   </Card>
+  <Dialog v-model:visible="vclDisplay" modal dismissableMask header="VCL Generated" :style="{  }" :breakpoints="{ '1199px': '75vw', '575px': '90vw' }">
+    <!-- <span class="text-surface-500 dark:text-surface-400 block mb-8">Update your information.</span> -->
+    <div v-html="vclContent" class="flex items-center gap-4 mb-4"></div>
+  </Dialog>
 </template>
+
+<style lang="css">
+.highlight {
+  /*
+  width: '50rem'
+
+  padding: 5px;
+  border: 1px black solid;
+  font-size: 0.8em; */
+}
+</style>
