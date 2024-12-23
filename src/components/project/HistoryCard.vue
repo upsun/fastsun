@@ -1,16 +1,24 @@
 <script setup lang="ts">
-import { inject, ref, toRaw, watchEffect } from 'vue';
+import { inject, onMounted, onBeforeUnmount, ref, toRaw, watchEffect } from 'vue';
 import { useToast } from 'primevue/usetoast';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import Button from "primevue/button"
 import ProjectAPIService from './project.api';
+import { eventBus, EventType } from "@/utils/eventBus";
 
 // Init
 const FASTLY_API_TOKEN = inject('FASTLY_API_TOKEN') as String;
 const toast = useToast();
 const props = defineProps({
   service_id: String
+});
+onMounted(() => {
+  eventBus.on(EventType.LOG_REFRESH, refresh);
+})
+
+onBeforeUnmount(() => {
+  eventBus.off(EventType.LOG_REFRESH);
 });
 
 // Data
@@ -89,11 +97,9 @@ watchEffect(refresh);
         <template #empty> No Activities found. </template>
         <template #loading> Loading activities data. Please wait. </template>
         <Column field="attributes.created_at" header="Date (UTC)" style="width: 10%">
-          <!-- <template #body="slotProps">
-            <span>Version {{ slotProps.data.number }}</span>
-            <span class="pi pi-stopwatch" v-if="slotProps.data.active"></span>
-            <span class="pi pi-lock" v-else></span>
-          </template> -->
+          <template #body="slotProps">
+            <span>{{ $d(slotProps.data.attributes.created_at, 'long') }}</span>
+          </template>
         </Column>
         <Column field="attributes.description" header="Event" style="width: 30%" />
         <Column field="attributes.username" header="User" style="width: 10%" />

@@ -3,6 +3,7 @@ import { inject } from 'vue';
 import { Button } from 'primevue';
 import { useToast } from 'primevue/usetoast';
 import PurgeAPIService from './purge.api';
+import { eventBus, EventType } from "@/utils/eventBus";
 
 // Init
 const FASTLY_API_TOKEN = inject('FASTLY_API_TOKEN') as String;
@@ -23,6 +24,7 @@ function purgeAll() {
   })
   .then(result => {
     toast.add({ severity: 'info', summary: 'Purged', life: 1000 })
+    eventBus.emit(EventType.LOG_REFRESH);
   });
 }
 
@@ -37,6 +39,7 @@ function purgeUrl(url: String) {
   })
   .then(result => {
     toast.add({ severity: 'info', summary: 'Purged', life: 1000 })
+    eventBus.emit(EventType.LOG_REFRESH);
   });
 }
 </script>

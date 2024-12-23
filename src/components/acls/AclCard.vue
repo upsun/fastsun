@@ -3,9 +3,11 @@ import { inject, ref, toRaw, watchEffect } from 'vue';
 import { useToast } from 'primevue/usetoast';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
+import Dialog from 'primevue/dialog';
 import Button from "primevue/button";
 import ConfirmDialog from 'primevue/confirmdialog';
 import AclAPIService from '@/components/acls/acl.api';
+import AclEntriesCard from '@/components/acls/AclEntriesCard.vue';
 
 // Init
 const FASTLY_API_TOKEN = inject('FASTLY_API_TOKEN') as String;
@@ -17,6 +19,9 @@ const props = defineProps({
 
 // Data
 const acls = ref([]);
+const acl_selected = ref();
+const deleteAclDialog = ref(false);
+const editAclDialog = ref(false);
 function refresh() {
   console.log("Refresh ACL!");
   const aclService = new AclAPIService(props.service_id!, FASTLY_API_TOKEN);
@@ -37,7 +42,7 @@ function refresh() {
     }
 
     acls.value.forEach( acl => {
-      aclService.getACLEntry(acl.id)
+      aclService.getACLEntry(acl!.id)
       .catch(error => {
         console.error(error);
         toast.add({ severity: 'error', summary: 'Error', detail: error, life: 3000 });
@@ -54,31 +59,45 @@ watchEffect(refresh);
 // Events
 function addAcl() {
   console.log("Add ACL !");
-  toast.add({
-    severity: 'warn',
-    summary: 'Not Implemented',
-    detail: 'This feature is currently not implemented !',
-    life: 3000 });
 
-    if (true) refresh();
+  acl_selected.value = {};
+  editAclDialog.value = true;
 }
 
 function editAcl(acl: any) {
   console.log("Edit " + acl.id);
-  toast.add({
-    severity: 'warn',
-    summary: 'Not Implemented',
-    detail: 'This feature is currently not implemented !',
-    life: 3000 });
+
+  const clone = JSON.parse(JSON.stringify(acl))
+  acl_selected.value = clone;
+  editAclDialog.value = true;
 }
+
+function openModal() {
+  editAclDialog.value = true;
+};
+
+function closeModal(updated: Boolean) {
+  acl_selected.value = {};
+  editAclDialog.value = false;
+};
 
 function confirmDeleteAcl(acl: any) {
   console.log("Delete " + acl.id);
-  toast.add({
-    severity: 'warn',
-    summary: 'Not Implemented',
-    detail: 'This feature is currently not implemented !',
-    life: 3000 });
+  acl_selected.value = acl;
+  deleteAclDialog.value = true;
+}
+
+function deleteAcl() {
+  console.log("Delete " + acl_selected.value.id);
+
+  //TODO call remove API
+
+  deleteAclDialog.value = true;
+  acls.value = acls.value.filter((val) => val.id !== acl_selected.value.id);
+  deleteAclDialog.value = false;
+  acl_selected.value = {};
+
+  toast.add({ severity: 'success', summary: 'Successful', detail: 'Product Deleted', life: 3000 });
 }
 
 // function onCellEditComplete() {}
@@ -167,9 +186,17 @@ function confirmDeleteAcl(acl: any) {
     <!-- <Column expander style="width: 5rem" /> -->
     <!-- <Column field="id" header="ID" sortable style="width: 25%"></Column> -->
     <Column field="name" header="Name" sortable></Column>
-    <Column field="created_at" header="Created at" sortable></Column>
-    <Column field="updated_at" header="Updated at" sortable></Column>
-    <Column :exportable="false" style="min-width: 12rem" header="Actions">
+    <Column field="created_at" header="Created at (UTC)" sortable>
+      <template #body="slotProps">
+        <span>{{ $d(slotProps.data.created_at, 'long') }}</span>
+      </template>
+    </Column>
+    <Column field="updated_at" header="Updated at (UTC)" sortable>
+      <template #body="slotProps">
+        <span>{{ $d(slotProps.data.updated_at, 'long') }}</span>
+      </template>
+    </Column>
+    <Column :exportable="false" style="min-width: 8rem" header="Actions">
         <template #body="slotProps">
             <Button icon="pi pi-pencil" outlined rounded class="mr-2" @click="editAcl(slotProps.data)" />
             <Button icon="pi pi-trash" outlined rounded severity="danger" @click="confirmDeleteAcl(slotProps.data)" />
@@ -204,4 +231,19 @@ function confirmDeleteAcl(acl: any) {
   </DataTable>
   </template>
   </Card>
+
+  <AclEntriesCard v-if="editAclDialog" :acl_data="acl_selected" :acl_state_dialog="editAclDialog" @update:visible="closeModal" />
+
+  <Dialog v-model:visible="deleteAclDialog" :style="{ width: '450px' }" header="Confirm" :modal="true">
+    <div class="flex items-center gap-4">
+        <i class="pi pi-exclamation-triangle !text-3xl" />
+        <span v-if="acl_selected"
+            >Are you sure you want to delete <b>{{ acl_selected.name }}</b>?</span
+        >
+    </div>
+    <template #footer>
+        <Button label="No" icon="pi pi-times" text @click="deleteAclDialog = false" />
+        <Button label="Yes" icon="pi pi-check" @click="deleteAcl" />
+    </template>
+  </Dialog>
 </template>

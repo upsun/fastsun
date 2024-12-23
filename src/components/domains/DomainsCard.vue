@@ -51,6 +51,7 @@ function AddDomain() {
 }
 
 function editDomain() {
+  console.log("Edit domain!");
   if (true) refresh();
 }
 
@@ -88,12 +89,16 @@ function confirmDeleteDomain(domain: any) {
         </template>
         <template #empty> No Domain defined. </template>
         <template #loading> Loading Domains data. Please wait...</template>
-        <Column field="name" header="Domain" sortable style="width: 80%"></Column>
-        <Column field="created_at" header="Added at" sortable style="width: 70%"></Column>
-        <Column :exportable="false" style="min-width: 12rem" header="Actions">
+        <Column field="name" header="Domain" sortable style="width: 60%"></Column>
+        <Column field="created_at" header="Added at (UTC)" sortable style="width: 30%">
+          <template #body="slotProps">
+            <span>{{ $d(slotProps.data.created_at, 'long') }}</span>
+          </template>
+        </Column>
+        <Column :exportable="false" style="min-width: 8rem" header="Actions">
           <template #body="slotProps">
             <Button icon="pi pi-pencil" outlined rounded @click="editDomain(slotProps.data)" />
-              <Button icon="pi pi-trash" outlined rounded severity="danger" @click="confirmDeleteDomain(slotProps.data)" />
+            <Button icon="pi pi-trash" outlined rounded severity="danger" @click="confirmDeleteDomain(slotProps.data)" />
           </template>
         </Column>
       </DataTable>

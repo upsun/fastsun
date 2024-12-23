@@ -1,11 +1,13 @@
 import './assets/main.css';
 
-import { createApp, provide } from 'vue';
+import { createApp } from 'vue';
+import { createI18n } from 'vue-i18n'
 
 import Aura from '@primevue/themes/aura';
 import PrimeVue from 'primevue/config';
 import Button from "primevue/button"
 import Card from 'primevue/card';
+
 import ConfirmationService from 'primevue/confirmationservice';
 import ToastService from "primevue/toastservice";
 
@@ -16,7 +18,36 @@ import 'primeicons/primeicons.css';
 import App from './App.vue';
 import router from './router';
 
+const  dateTimeFormats = () => ({
+  'en': {
+    short: {
+      year: 'numeric', month: 'short', day: 'numeric'
+    },
+    long: {
+      year: 'numeric', month: 'short', day: 'numeric',
+      hour: 'numeric', minute: 'numeric'
+    }
+  },
+  'fr': {
+    short: {
+      day: 'numeric', month: 'short', year: 'numeric',
+    },
+    long: {
+      day: 'numeric', month: 'short', year: 'numeric',
+      hour: 'numeric', minute: 'numeric'
+    }
+  }
+});
+const i18n = createI18n({
+  // something vue-i18n options here ...
+  locale: 'en',
+  fallbackLocale: 'en',
+  availableLocales: ['fr', 'en'],
+  datetimeFormats: dateTimeFormats(),
+})
+
 const app = createApp(App)
+  .use(i18n)
   .use(router)
   .use(PrimeVue,{
     theme: {

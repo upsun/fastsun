@@ -91,9 +91,17 @@ function showVCL(data: any) {
           </template>
         </Column>
         <Column field="comment" header="Comment" sortable style="width: 30%" />
-        <Column field="created_at" header="Created at" sortable style="width: 10%" />
-        <Column field="updated_at" header="Updated at" sortable style="width: 10%" />
-        <Column :exportable="false" style="min-width: 12rem">
+        <Column field="created_at" header="Created at (UTC)" sortable style="width: 10%">
+          <template #body="slotProps">
+            <span>{{ $d(slotProps.data.created_at, 'long') }}</span>
+          </template>
+        </Column>
+        <Column field="updated_at" header="Updated at (UTC)" sortable style="width: 10%">
+          <template #body="slotProps">
+            <span>{{ $d(slotProps.data.updated_at, 'long') }}</span>
+          </template>
+        </Column>
+        <Column :exportable="false" style="min-width: 8rem">
             <template #body="slotProps">
                 <Button icon="pi pi-search" outlined rounded class="mr-2" @click="showVCL(slotProps.data)" />
                 <!-- <Button icon="pi pi-pencil" outlined rounded class="mr-2" @click="editVCL(slotProps.data)" />
