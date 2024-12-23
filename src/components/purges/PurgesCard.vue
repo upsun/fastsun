@@ -1,37 +1,43 @@
 <script setup lang="ts">
-import { Button } from 'primevue';
-import PurgeAPIService from './purge.api';
 import { inject } from 'vue';
+import { Button } from 'primevue';
 import { useToast } from 'primevue/usetoast';
+import PurgeAPIService from './purge.api';
 
+// Init
 const FASTLY_API_TOKEN = inject('FASTLY_API_TOKEN') as String;
-
 const toast = useToast();
 const props = defineProps({
   service_id: String,
 });
 
-async function purgeAll() {
+// Events
+function purgeAll() {
+  console.log("Purge All!");
   const purgeService = new PurgeAPIService(props.service_id!, FASTLY_API_TOKEN);
-  const [error, data] = await purgeService.purgeAll();
 
-  if (error) {
+  purgeService.purgeAll()
+  .catch(error => {
     console.error(error);
     toast.add({ severity: 'error', summary: 'Error', detail: error[0], life: 1000 })
-  } else {
+  })
+  .then(result => {
     toast.add({ severity: 'info', summary: 'Purged', life: 1000 })
-  }
+  });
 }
-async function purgeUrl(url: String) {
-  const purgeService = new PurgeAPIService(props.service_id!, FASTLY_API_TOKEN);
-  const [error, data] = await purgeService.purgeUrl(url);
 
-  if (error) {
+function purgeUrl(url: String) {
+  console.log("Purge URL : " + url);
+  const purgeService = new PurgeAPIService(props.service_id!, FASTLY_API_TOKEN);
+
+  purgeService.purgeUrl(url)
+  .catch(error => {
     console.error(error);
     toast.add({ severity: 'error', summary: 'Error', detail: error[0], life: 1000 })
-  } else {
+  })
+  .then(result => {
     toast.add({ severity: 'info', summary: 'Purged', life: 1000 })
-  }
+  });
 }
 </script>
 

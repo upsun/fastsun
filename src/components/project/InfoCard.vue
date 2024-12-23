@@ -2,12 +2,14 @@
 import { inject, ref, watchEffect } from 'vue';
 import PurgesCard from '@/components/purges/PurgesCard.vue';
 
+// Init
 const props = defineProps({
   service_id: String,
   vcl_version: Number
 });
 
-
+// Data
+const upsun_id = ref("Not define")
 </script>
 
 <template>
