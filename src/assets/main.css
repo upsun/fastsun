@@ -3,7 +3,7 @@
 #app {
   max-width: 1280px;
   margin: 0 auto;
-  padding: 2rem;
+  padding: 1rem 2rem;
   font-weight: normal;
 }
 
@@ -12,6 +12,12 @@ body {
   /* place-items: center; */
   background-color: rgb(242, 243, 244);
 
+}
+
+main {
+    /* display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between; */
 }
 
 .flex {
@@ -45,6 +51,6 @@ body {
   #app {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    padding: 0 2rem;
+    padding: 1rem 2rem;
   }
 } */

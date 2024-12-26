@@ -46,6 +46,13 @@ const chartOptions = ref({
       // ticks: {
       //   stepSize: 100
       // }
+      time: {
+        unit: 'second',
+        unitStepSize: 1,
+        displayFormats: {
+          second: 'hh:mm:ss'
+        }
+      }
     }
   }
 });

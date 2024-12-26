@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import { inject, ref, toRaw, watchEffect } from 'vue'
 import { useToast } from 'primevue/usetoast';
-import AclCard from '@/components/acls/AclCard.vue';
-import VersionsCard from '@/components/vcl/VersionsCard.vue';
+import AclsCard from '@/components/acls/AclCard.vue';
+import DomaCard from '@/components/domains/DomainsCard.vue';
+import HistCard from '@/components/project/HistoryCard.vue';
 import InfoCard from '@/components/project/InfoCard.vue';
-import DomainsCard from '@/components/domains/DomainsCard.vue';
-import HistoryCard from '@/components/project/HistoryCard.vue';
-import ProjectAPIService from '@/components/project/project.api';
 import StatCard from '@/components/project/StatCard.vue';
+import VersCard from '@/components/vcl/VersionsCard.vue';
+import ProjectAPIService from '@/components/project/project.api';
+
 
 const service_id = ref(inject("FASTLY_API_SERVICE") as string);
 const FASTLY_API_TOKEN = inject('FASTLY_API_TOKEN') as String;
@@ -15,12 +16,12 @@ const toast = useToast();
 
 // TODO get current version HERE !
 const vcl_version = ref(-1);
-const detail = ref();
+const project_detail = ref();
 
 function refresh() {
   console.log("Refresh Project Detail!");
-  const projectService = new ProjectAPIService (service_id.value, FASTLY_API_TOKEN);
 
+  const projectService = new ProjectAPIService (service_id.value, FASTLY_API_TOKEN);
   projectService.getProject()
   .catch(error => {
     console.error(error);
@@ -28,11 +29,11 @@ function refresh() {
   })
   .then(result => {
     const [errorU, dataU] = result;
-    detail.value = dataU;
-    vcl_version.value = dataU.version.number;
+    project_detail.value = dataU;
+    vcl_version.value = dataU.active_version.number; // Can be refactor with project_detail.
 
     if (import.meta.env.DEV) {
-      console.log(toRaw(detail.value));
+      console.log(toRaw(project_detail.value));
     }
   });
 };
@@ -42,11 +43,11 @@ watchEffect(refresh);
 
 <template>
   <main>
-    <InfoCard v-if="vcl_version >= 0" :vcl_version="vcl_version" :service_id="service_id" /><br/>
-    <StatCard :service_id="service_id"/><br/>
-    <DomainsCard v-if="vcl_version >= 0" :vcl_version="vcl_version" :service_id="service_id" /><br/>
-    <VersionsCard :service_id="service_id" /><br/>
-    <HistoryCard :service_id="service_id" /><br/>
-    <AclCard v-if="vcl_version >= 0" :vcl_version="vcl_version" :service_id="service_id" />
+    <InfoCard :service_id="service_id" :vcl_version="vcl_version" v-if="vcl_version >= 1" :project_detail="project_detail"/><br/>
+    <StatCard :service_id="service_id" /><br/>
+    <DomaCard :service_id="service_id" :vcl_version="vcl_version" v-if="vcl_version >= 1" /><br/>
+    <VersCard :service_id="service_id" /><br/>
+    <HistCard :service_id="service_id" /><br/>
+    <AclsCard :service_id="service_id" :vcl_version="vcl_version" v-if="vcl_version >= 1" />
   </main>
 </template>
