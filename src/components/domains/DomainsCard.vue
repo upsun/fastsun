@@ -3,8 +3,10 @@ import { inject, ref, toRaw, watchEffect } from 'vue';
 import { useToast } from 'primevue/usetoast';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
+import Dialog from 'primevue/dialog';
 import Button from "primevue/button";
 import DomainAPIService from './domain.api';
+import DomainEntryCard from './DomainEntryCard.vue';
 
 // Init
 const FASTLY_API_TOKEN = inject('FASTLY_API_TOKEN') as String;
@@ -16,6 +18,9 @@ const props = defineProps({
 
 // Data
 const domains = ref([]);
+const domain_selected = ref();
+const deleteDomainDialog = ref(false);
+const editDomainDialog = ref(false);
 function refresh() {
   console.log("Refresh Domain!");
   const projectService = new DomainAPIService(props.service_id!, FASTLY_API_TOKEN);
@@ -39,29 +44,54 @@ function refresh() {
 watchEffect(refresh);
 
 // Events
-function AddDomain() {
-  console.log("Add domain!");
-  toast.add({
-    severity: 'warn',
-    summary: 'Not Implemented',
-    detail: 'This feature is currently not implemented !',
-    life: 3000 });
+function openDomainEditModal() {
+  editDomainDialog.value = true;
+};
 
-  if (true) refresh();
+function closeDomainEditModal(updated: Boolean) {
+  editDomainDialog.value = false;
+  domain_selected.value = {};
+};
+
+function openDomainDeleteModal() {
+  deleteDomainDialog.value = true;
 }
 
-function editDomain() {
+function closeDomainDeleteModal() {
+  deleteDomainDialog.value = false;
+  domain_selected.value = {};
+}
+
+function addDomain() {
+  console.log("Add domain!");
+
+  domain_selected.value = {};
+  openDomainEditModal();
+}
+
+function editDomain(domain: any) {
   console.log("Edit domain!");
-  if (true) refresh();
+
+  const clone = JSON.parse(JSON.stringify(domain))
+  domain_selected.value = clone;
+  openDomainEditModal();
 }
 
 function confirmDeleteDomain(domain: any) {
-  console.log("Delete domain : "+ domain.name);
-  toast.add({
-    severity: 'warn',
-    summary: 'Not Implemented',
-    detail: `This feature is currently not implemented !<br/> For ${domain.name}`,
-    life: 3000 });
+  console.log("Delete domain (check) : "+ domain.name);
+
+  domain_selected.value = domain;
+  openDomainDeleteModal();
+}
+
+function deleteDomain() {
+  console.log("Delete domain (make) :" + domain_selected.value.name);
+
+  //TODO call remove API
+  domains.value = domains.value.filter((val: any) => val.id !== domain_selected.value.id);
+  closeDomainDeleteModal();
+
+  toast.add({ severity: 'success', summary: 'Successful', detail: 'Domain Deleted', life: 3000 });
 }
 </script>
 
@@ -78,7 +108,7 @@ function confirmDeleteDomain(domain: any) {
         <template #header>
           <div class="flex flex-wrap gap-2 items-center justify-between">
             <h4 class="m-0" style="display: inline-flex;">Manage Domains</h4>
-            <Button label="Add" icon="pi pi-plus" size="small" class="mr-2" style="margin-left: auto;" @click="AddDomain()" />
+            <Button label="Add" icon="pi pi-plus" size="small" class="mr-2" style="margin-left: auto;" @click="addDomain()" />
           </div>
         </template>
         <template #paginatorstart>
@@ -104,4 +134,19 @@ function confirmDeleteDomain(domain: any) {
       </DataTable>
     </template>
   </Card>
+
+  <DomainEntryCard v-if="editDomainDialog" :domain_data="domain_selected" :domain_state_dialog="editDomainDialog" @update:visible="closeDomainEditModal" />
+
+  <Dialog v-model:visible="deleteDomainDialog" :style="{ width: '450px' }" header="Confirm" :modal="true">
+    <div class="flex items-center gap-4">
+        <i class="pi pi-exclamation-triangle !text-3xl" />
+        <span v-if="domain_selected"
+            >Are you sure you want to delete <b>{{ domain_selected.name }}</b>?</span
+        >
+    </div>
+    <template #footer>
+        <Button label="No" icon="pi pi-times" text @click="deleteDomainDialog = false" />
+        <Button label="Yes" icon="pi pi-check" @click="deleteDomain" />
+    </template>
+  </Dialog>
 </template>>

@@ -1,10 +1,9 @@
 <script setup lang="ts">
-import { inject, ref, toRaw, watchEffect } from 'vue';
+import { ref, watchEffect } from 'vue';
 import { useToast } from 'primevue/usetoast';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import Dialog from 'primevue/dialog';
-import { Form } from '@primevue/forms';
 import InputText from 'primevue/inputtext';
 
 // Init
@@ -22,6 +21,7 @@ const headerTitle = ref("ACL");
 function refresh() {
   console.log("Load ACL entity!");
 
+  //TODO call remove API
   if ((props.acl_data === undefined) || (Object.keys(props.acl_data).length === 0)) {
     headerTitle.value = "Add ACL";
   } else {

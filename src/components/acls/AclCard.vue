@@ -6,8 +6,8 @@ import Column from 'primevue/column';
 import Dialog from 'primevue/dialog';
 import Button from "primevue/button";
 import ConfirmDialog from 'primevue/confirmdialog';
-import AclAPIService from '@/components/acls/acl.api';
-import AclEntriesCard from '@/components/acls/AclEntriesCard.vue';
+import AclAPIService from './acl.api';
+import AclEntriesCard from './AclEntriesCard.vue';
 
 // Init
 const FASTLY_API_TOKEN = inject('FASTLY_API_TOKEN') as String;
@@ -57,11 +57,29 @@ function refresh() {
 watchEffect(refresh);
 
 // Events
+function openAclEditModal() {
+  editAclDialog.value = true;
+};
+
+function closeAclEditModal(updated: Boolean) {
+  editAclDialog.value = false;
+  acl_selected.value = {};
+};
+
+function openAclDeleteModal() {
+  deleteAclDialog.value = true;
+}
+
+function closeAclDeleteModal() {
+  deleteAclDialog.value = false;
+  acl_selected.value = {};
+}
+
 function addAcl() {
   console.log("Add ACL !");
 
   acl_selected.value = {};
-  editAclDialog.value = true;
+  openAclEditModal();
 }
 
 function editAcl(acl: any) {
@@ -69,42 +87,25 @@ function editAcl(acl: any) {
 
   const clone = JSON.parse(JSON.stringify(acl))
   acl_selected.value = clone;
-  editAclDialog.value = true;
+  openAclEditModal();
 }
-
-function openModal() {
-  editAclDialog.value = true;
-};
-
-function closeModal(updated: Boolean) {
-  acl_selected.value = {};
-  editAclDialog.value = false;
-};
 
 function confirmDeleteAcl(acl: any) {
   console.log("Delete " + acl.id);
+
   acl_selected.value = acl;
-  deleteAclDialog.value = true;
+  openAclDeleteModal();
 }
 
 function deleteAcl() {
   console.log("Delete " + acl_selected.value.id);
 
   //TODO call remove API
+  acls.value = acls.value.filter((val: any) => val.id !== acl_selected.value.id);
+  closeAclDeleteModal();
 
-  deleteAclDialog.value = true;
-  acls.value = acls.value.filter((val) => val.id !== acl_selected.value.id);
-  deleteAclDialog.value = false;
-  acl_selected.value = {};
-
-  toast.add({ severity: 'success', summary: 'Successful', detail: 'Product Deleted', life: 3000 });
+  toast.add({ severity: 'success', summary: 'Successful', detail: 'ACL Deleted', life: 3000 });
 }
-
-// function onCellEditComplete() {}
-// function expandAll() {}
-// function collapseAll() {}
-// function onRowExpand() {}
-// function onRowCollapse() {}
 </script>
 
 <template>
@@ -232,7 +233,7 @@ function deleteAcl() {
   </template>
   </Card>
 
-  <AclEntriesCard v-if="editAclDialog" :acl_data="acl_selected" :acl_state_dialog="editAclDialog" @update:visible="closeModal" />
+  <AclEntriesCard v-if="editAclDialog" :acl_data="acl_selected" :acl_state_dialog="editAclDialog" @update:visible="closeAclEditModal" />
 
   <Dialog v-model:visible="deleteAclDialog" :style="{ width: '450px' }" header="Confirm" :modal="true">
     <div class="flex items-center gap-4">
