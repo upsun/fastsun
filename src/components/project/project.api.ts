@@ -1,9 +1,19 @@
 import APIService from "../base/api";
+import axios, { type AxiosInstance } from "axios";
 
 export default class ProjectAPIService extends APIService {
+  protected wsClientStat: AxiosInstance;
 
   constructor(service_id: String, token: String) {
     super(service_id, token);
+
+    this.wsClientStat = axios.create({
+      baseURL: 'https://rt.fastly.com/v1/channel/',
+      headers: {
+        'Fastly-Key': token,
+        'Accept': 'application/json'
+      }
+    });
   };
 
   async getDomains(version_id: Number) {
@@ -40,6 +50,16 @@ export default class ProjectAPIService extends APIService {
   async getProject() {
     try  {
       const {data} = await this.wsClient.get(`service/${this.service_id}/details`);
+      return [null, data];
+    } catch (error) {
+      console.error(error);
+      return [error];
+    }
+  }
+
+  async getStat() {
+    try  {
+      const {data} = await this.wsClientStat.get(`${this.service_id}/ts/${Math.floor(new Date().valueOf() / 1000)}`);
       return [null, data];
     } catch (error) {
       console.error(error);

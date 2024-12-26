@@ -36,10 +36,12 @@ export default class VclAPIService extends APIService {
     }
   }
 
-  async getVCL(version_id: String) {
+  async getVCL(version_id: String)
+  {
     try  {
-      const {data} = await this.wsClient.get(`service/${this.service_id}/version/${version_id}/generated_vcl/content`);
-      return [null, data];
+      const responseHtml = await this.wsClient.get(`service/${this.service_id}/version/${version_id}/generated_vcl/content`);
+      const responseRaw = await this.wsClient.get(`service/${this.service_id}/version/${version_id}/generated_vcl`);
+      return [responseRaw.data, responseHtml.data];
     } catch (error) {
       console.error(error);
       return [error];

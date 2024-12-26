@@ -47,7 +47,7 @@ function saveDomain() {
 <template>
   <Dialog v-bind:visible="domain_state_dialog" @update:visible="closeModal" :style="{ width: '450px' }" :header="headerTitle" :modal="true" >
       <div>
-        <label for="name" class="block font-bold mb-3">Name</label>
+        <label for="name" class="block font-bold mb-3">Domain</label>
         <InputText id="name" v-model.trim="domain_data!.name" required="true" autofocus :invalid="submitted && !domain_data!.name" fluid />
         <small v-if="submitted && !domain_data!.name" class="text-red-500">Name is required.</small>
       </div>

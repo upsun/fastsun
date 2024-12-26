@@ -3,9 +3,9 @@ import { inject, ref, toRaw, watchEffect } from 'vue';
 import { useToast } from 'primevue/usetoast';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
-import Dialog from 'primevue/dialog';
 import Button from "primevue/button";
 import VclAPIService from './vcl.api';
+import DisplayVclCard from './DisplayVclCard.vue';
 
 // Init
 const FASTLY_API_TOKEN = inject('FASTLY_API_TOKEN') as String;
@@ -16,8 +16,8 @@ const props = defineProps({
 
 // Data
 const versions = ref([]);
-const vclContent = ref("");
-const vclDisplay = ref(false)
+const vcl_selected = ref();
+const displayVclDialog = ref(false);
 function refresh() {
   console.log("Refresh Version History!");
   const vclService = new VclAPIService(props.service_id!, FASTLY_API_TOKEN);
@@ -40,7 +40,19 @@ function refresh() {
 };
 watchEffect(refresh);
 
+// Events
+function openVclDisplayModal() {
+  displayVclDialog.value = true;
+};
+
+function closeVclDisplayModal(updated: Boolean) {
+  displayVclDialog.value = false;
+  vcl_selected.value = {};
+};
+
 function showVCL(data: any) {
+  console.log("Display VCL!");
+
   const vclService = new VclAPIService(props.service_id!, FASTLY_API_TOKEN);
   vclService.getVCL(data.number)
   .catch(error => {
@@ -48,9 +60,12 @@ function showVCL(data: any) {
     toast.add({ severity: 'error', summary: 'Error', detail: error, life: 3000 });
   })
   .then(result => {
-    const [error, data] = result;
-    vclContent.value = data.content;
-    vclDisplay.value = true;
+    const [dataRaw, dataHtml] = result;
+    vcl_selected.value = data;
+    // Extra content
+    vcl_selected.value.contentHtml = dataHtml.content;
+    vcl_selected.value.contentRaw = dataRaw.content;
+    openVclDisplayModal();
   });
 }
 </script>
@@ -111,10 +126,8 @@ function showVCL(data: any) {
       </DataTable>
     </template>
   </Card>
-  <Dialog v-model:visible="vclDisplay" modal dismissableMask header="VCL Generated" :style="{  }" :breakpoints="{ '1199px': '75vw', '575px': '90vw' }">
-    <!-- <span class="text-surface-500 dark:text-surface-400 block mb-8">Update your information.</span> -->
-    <div v-html="vclContent" class="flex items-center gap-4 mb-4"></div>
-  </Dialog>
+
+  <DisplayVclCard v-if="displayVclDialog" :vcl_data="vcl_selected" :vcl_state_dialog="displayVclDialog" @update:visible="closeVclDisplayModal"/>
 </template>
 
 <style lang="css">

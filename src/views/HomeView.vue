@@ -7,6 +7,7 @@ import InfoCard from '@/components/project/InfoCard.vue';
 import DomainsCard from '@/components/domains/DomainsCard.vue';
 import HistoryCard from '@/components/project/HistoryCard.vue';
 import ProjectAPIService from '@/components/project/project.api';
+import StatCard from '@/components/project/StatCard.vue';
 
 const service_id = ref(inject("FASTLY_API_SERVICE") as string);
 const FASTLY_API_TOKEN = inject('FASTLY_API_TOKEN') as String;
@@ -42,6 +43,7 @@ watchEffect(refresh);
 <template>
   <main>
     <InfoCard v-if="vcl_version >= 0" :vcl_version="vcl_version" :service_id="service_id" /><br/>
+    <StatCard :service_id="service_id"/><br/>
     <DomainsCard v-if="vcl_version >= 0" :vcl_version="vcl_version" :service_id="service_id" /><br/>
     <VersionsCard :service_id="service_id" /><br/>
     <HistoryCard :service_id="service_id" /><br/>
