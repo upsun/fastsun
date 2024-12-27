@@ -6,7 +6,7 @@ import PurgeAPIService from './purge.api';
 import { eventBus, EventType } from "@/utils/eventBus";
 
 // Init
-const FASTLY_API_TOKEN = inject('FASTLY_API_TOKEN') as String;
+const FASTLY_API_TOKEN = inject('FASTLY_API_TOKEN') as string;
 const toast = useToast();
 const props = defineProps({
   service_id: String,
@@ -28,7 +28,7 @@ function purgeAll() {
   });
 }
 
-function purgeUrl(url: String) {
+function purgeUrl(url: string) {
   console.log("Purge URL : " + url);
   const purgeService = new PurgeAPIService(props.service_id!, FASTLY_API_TOKEN);
 

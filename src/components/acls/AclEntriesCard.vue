@@ -1,10 +1,15 @@
 <script setup lang="ts">
 import { ref, watchEffect } from 'vue';
 import { useToast } from 'primevue/usetoast';
-import DataTable from 'primevue/datatable';
+import DataTable, { type DataTableRowEditSaveEvent } from 'primevue/datatable';
 import Column from 'primevue/column';
 import Dialog from 'primevue/dialog';
 import InputText from 'primevue/inputtext';
+import type Identifiable from '@/components/base/type';
+
+interface Entity extends Identifiable {
+  ip: string;
+}
 
 // Init
 const emit = defineEmits(["update:visible"]);
@@ -15,8 +20,13 @@ const props = defineProps({
 });
 
 // Data
-const submitted = ref(false);
-const headerTitle = ref("ACL");
+const submitted = ref<boolean>(false);
+const headerTitle = ref<string>("ACL");
+const entries = ref<Entity[]>([]);
+const ip_selected = ref<Entity>();
+const deleteIpDialog = ref<boolean>(false);
+const editingRows = ref([]);
+const idCounter = ref<number>(-1);
 
 function refresh() {
   console.log("Load ACL entity!");
@@ -26,6 +36,8 @@ function refresh() {
     headerTitle.value = "Add ACL";
   } else {
     headerTitle.value = "Edit ACL";
+    //TODO if need a copy : const clone = JSON.parse(JSON.stringify(props.acl_data?.entries));
+    entries.value = props.acl_data.entries.data;
   }
 };
 watchEffect(refresh);
@@ -35,29 +47,108 @@ function closeModal(updated = false) {
   emit("update:visible", updated);
 };
 
+function openIpDeleteModal() {
+  deleteIpDialog.value = true;
+}
+
+function closeIpDeleteModal() {
+  deleteIpDialog.value = false;
+  ip_selected.value = {} as Entity;
+}
+
+function onRowEditSave(event: DataTableRowEditSaveEvent) {
+  const { newData, index } = event;
+  entries.value[index] = newData;
+}
+
 function saveACL() {
   //TODO Save by API
   // saveACL(acl
+  console.log(ip_selected.value)
 
-  if (true) {
+  // if (true) {
     closeModal(true);
-    toast.add({ severity: 'success', summary: 'Successful', detail: 'Product Created', life: 3000 });
+    toast.add({ severity: 'success', summary: 'Successful', detail: 'Acl Created', life: 3000 });
+  // }
+}
+
+function addIp() {
+  const finded = entries.value.find((entrie: Entity) => {
+    return entrie.ip == "0.0.0.0";
+  });
+
+  if (!finded) {
+    const newRow = {id: idCounter.value--, ip:"0.0.0.0", comment:"Add by FastlySun"} as never
+    entries.value.unshift(newRow);
+    editingRows.value = [...editingRows.value, newRow]
+  }
+}
+
+function confirmDeleteAclEntry(index: number) {
+  const ip = entries.value[index] as Entity;
+  console.log("Delete Ip (check) : "+ ip.id);
+
+  ip_selected.value = ip;
+  openIpDeleteModal();
+}
+
+function deleteIp() {
+  if (ip_selected.value != null) {
+    console.log("Delete domain (make) :" + ip_selected.value.ip);
+
+    entries.value = entries.value.filter((val: Entity) => val.id !== ip_selected.value!.id);
+    closeIpDeleteModal();
   }
 }
 </script>
 
 <template>
   <!-- <Form v-slot="$form" @submit="saveACL"  @submit.prevent="saveACL" class="flex flex-col gap-4 w-full sm:w-56"> -->
-    <Dialog v-bind:visible="acl_state_dialog" @update:visible="closeModal" :style="{ width: '450px' }" :header="headerTitle" :modal="true" >
+    <Dialog v-bind:visible="acl_state_dialog" @update:visible="closeModal" :style="{ width: '900px' }" v-bind:header="headerTitle" :modal="true" >
       <div>
         <label for="name" class="block font-bold mb-3">Name</label>
         <InputText id="name" v-model.trim="acl_data!.name" required="true" autofocus :invalid="submitted && !acl_data!.name" fluid />
         <small v-if="submitted && !acl_data!.name" class="text-red-500">Name is required.</small>
       </div>
-
+      <br/>
       <div>
-        <DataTable :value="acl_data!.entries" dataKey="id">
-          <Column field="name" header="Name" sortable></Column>
+        <DataTable :value="entries" dataKey="id" scrollable scrollHeight="400px" editMode="row" v-model:editingRows="editingRows" @row-edit-save="onRowEditSave"
+        :pt="{
+          table: { style: 'min-width: 50rem' },
+          column: {
+              bodycell: ({ state }) => ({
+                  style:  state['d_editing']&&'padding-top: 0.75rem; padding-bottom: 0.75rem'
+              })
+          }
+        }">
+          <template #empty> No IPs defined. </template>
+          <template #loading> Loading IPs data. Please wait...</template>
+          <template #header>
+            <div class="flex flex-wrap gap-2 items-center justify-between">
+              <h4 class="m-0" style="display: inline-flex;">Manage IPs</h4>
+              <Button label="Add" icon="pi pi-plus" size="small" class="mr-2" style="margin-left: auto;" @click="addIp()" />
+            </div>
+          </template>
+          <Column field="ip" header="IP" sortable>
+            <template #editor="{ data, field }">
+              <InputText v-model="data[field]" fluid />
+            </template>
+          </Column>
+          <Column field="comment" header="Comment" sortable>
+            <template #editor="{ data, field }">
+              <InputText v-model="data[field]" fluid />
+            </template>
+          </Column>
+          <Column :exportable="false" style="min-width: 8rem" header="Actions">
+            <template #body="{ editorInitCallback, index}">
+              <Button icon="pi pi-pencil" outlined rounded class="mr-2" @click="editorInitCallback" />
+              <Button icon="pi pi-trash" outlined rounded severity="danger" @click="confirmDeleteAclEntry(index)" />
+            </template>
+            <template #editor="{ editorSaveCallback, editorCancelCallback }">
+              <Button icon="pi pi-save" text rounded @click="editorSaveCallback" />
+              <Button icon="pi pi-times" text rounded severity="danger" @click="editorCancelCallback" />
+            </template>
+          </Column>
         </DataTable>
       </div>
       <template #footer>
@@ -66,4 +157,16 @@ function saveACL() {
       </template>
     </Dialog>
   <!-- </Form> -->
+  <Dialog v-model:visible="deleteIpDialog" :style="{ width: '450px' }" header="Confirm" :modal="true">
+    <div class="flex items-center gap-4">
+        <i class="pi pi-exclamation-triangle !text-3xl" />
+        <span v-if="ip_selected"
+            >Are you sure you want to delete <b>{{ ip_selected.ip }}</b>?</span
+        >
+    </div>
+    <template #footer>
+        <Button label="No" icon="pi pi-times" text @click="deleteIpDialog = false" />
+        <Button label="Yes" icon="pi pi-check" @click="deleteIp" />
+    </template>
+  </Dialog>
 </template>

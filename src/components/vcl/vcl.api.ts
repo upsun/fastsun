@@ -2,7 +2,7 @@ import APIService from "../base/api";
 
 export default class VclAPIService extends APIService {
 
-  constructor(service_id: String, token: String) {
+  constructor(service_id: string, token: string) {
     super(service_id, token);
   };
 
@@ -16,7 +16,7 @@ export default class VclAPIService extends APIService {
     }
   }
 
-  async validate(version_id: String) {
+  async validate(version_id: string) {
     try  {
       const {data} = await this.wsClient.get(`service/${this.service_id}/version/${version_id}/validate`);
       return [null, data];
@@ -26,7 +26,7 @@ export default class VclAPIService extends APIService {
     }
   }
 
-  async activate(version_id: String) {
+  async activate(version_id: string) {
     try  {
       const {data} = await this.wsClient.put(`service/${this.service_id}/version/${version_id}/activate`);
       return [null, data];
@@ -36,7 +36,7 @@ export default class VclAPIService extends APIService {
     }
   }
 
-  async getVCL(version_id: String)
+  async getVCL(version_id: string)
   {
     try  {
       const responseHtml = await this.wsClient.get(`service/${this.service_id}/version/${version_id}/generated_vcl/content`);

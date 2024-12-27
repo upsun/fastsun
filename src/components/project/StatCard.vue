@@ -7,7 +7,7 @@ import 'chartjs-adapter-date-fns';
 
 // Init
 const sampleCount = 20;
-const FASTLY_API_TOKEN = inject('FASTLY_API_TOKEN') as String;
+const FASTLY_API_TOKEN = inject('FASTLY_API_TOKEN') as string;
 const toast = useToast();
 const props = defineProps({
   service_id: String,

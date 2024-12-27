@@ -4,14 +4,14 @@ export type APIResponse = [null, null] | [Error];
 
 export default class AclAPIService extends APIService {
 
-  constructor(service_id: String, token: String) {
+  constructor(service_id: string, token: string) {
     super(service_id, token);
   };
 
   /**
    *
    */
-  async getACL(version: Number) {
+  async getACL(version: number) {
     try  {
       const {data} = await this.wsClient.get(`service/${this.service_id}/version/${version}/acl`);
       return [null, data];

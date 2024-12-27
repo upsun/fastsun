@@ -2,7 +2,7 @@ import APIService from "../base/api";
 
 export default class PurgeAPIService extends APIService {
 
-  constructor(service_id: String, token: String) {
+  constructor(service_id: string, token: string) {
     super(service_id, token);
   };
 
@@ -16,7 +16,7 @@ export default class PurgeAPIService extends APIService {
     }
   }
 
-  async purgeUrl(url: String) {
+  async purgeUrl(url: string) {
     try  {
       const {data} = await this.wsClient.post(`purge/${url}`);
       return [null, data];

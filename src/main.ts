@@ -46,7 +46,7 @@ const i18n = createI18n({
   datetimeFormats: dateTimeFormats(),
 })
 
-const app = createApp(App)
+const _app = createApp(App)
   .use(i18n)
   .use(router)
   .use(PrimeVue,{

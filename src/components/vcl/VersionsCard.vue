@@ -6,17 +6,24 @@ import Column from 'primevue/column';
 import Button from "primevue/button";
 import VclAPIService from './vcl.api';
 import DisplayVclCard from './DisplayVclCard.vue';
+import type Identifiable from '@/components/base/type';
+
+interface Entity extends Identifiable {
+  number: string;
+  contentHtml: string;
+  contentRaw: string;
+}
 
 // Init
-const FASTLY_API_TOKEN = inject('FASTLY_API_TOKEN') as String;
+const FASTLY_API_TOKEN = inject('FASTLY_API_TOKEN') as string;
 const toast = useToast();
 const props = defineProps({
   service_id: String
 });
 
 // Data
-const versions = ref([]);
-const vcl_selected = ref();
+const versions = ref<Entity[]>([]);
+const vcl_selected = ref<Entity>();
 const displayVclDialog = ref(false);
 function refresh() {
   console.log("Refresh Version History!");
@@ -45,12 +52,12 @@ function openVclDisplayModal() {
   displayVclDialog.value = true;
 };
 
-function closeVclDisplayModal(updated: Boolean) {
+function closeVclDisplayModal(updated: boolean) {
   displayVclDialog.value = false;
-  vcl_selected.value = {};
+  vcl_selected.value = {} as Entity;
 };
 
-function showVCL(data: any) {
+function showVCL(data: Entity) {
   console.log("Display VCL!");
 
   const vclService = new VclAPIService(props.service_id!, FASTLY_API_TOKEN);
@@ -63,8 +70,8 @@ function showVCL(data: any) {
     const [dataRaw, dataHtml] = result;
     vcl_selected.value = data;
     // Extra content
-    vcl_selected.value.contentHtml = dataHtml.content;
-    vcl_selected.value.contentRaw = dataRaw.content;
+    vcl_selected.value!.contentHtml = dataHtml.content;
+    vcl_selected.value!.contentRaw = dataRaw.content;
     openVclDisplayModal();
   });
 }
@@ -129,14 +136,3 @@ function showVCL(data: any) {
 
   <DisplayVclCard v-if="displayVclDialog" :vcl_data="vcl_selected" :vcl_state_dialog="displayVclDialog" @update:visible="closeVclDisplayModal"/>
 </template>
-
-<style lang="css">
-.highlight {
-  /*
-  width: '50rem'
-
-  padding: 5px;
-  border: 1px black solid;
-  font-size: 0.8em; */
-}
-</style>

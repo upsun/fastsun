@@ -11,7 +11,7 @@ import ProjectAPIService from '@/components/project/project.api';
 
 
 const service_id = ref(inject("FASTLY_API_SERVICE") as string);
-const FASTLY_API_TOKEN = inject('FASTLY_API_TOKEN') as String;
+const FASTLY_API_TOKEN = inject('FASTLY_API_TOKEN') as string;
 const toast = useToast();
 
 // TODO get current version HERE !

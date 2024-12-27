@@ -6,9 +6,20 @@ import Column from 'primevue/column';
 import Button from "primevue/button"
 import ProjectAPIService from './project.api';
 import { eventBus, EventType } from "@/utils/eventBus";
+import type Identifiable from '@/components/base/type';
+
+
+interface Attributes extends Identifiable {
+  user_id: string;
+  username: string;
+}
+
+interface Entity extends Identifiable {
+  attributes: Attributes;
+}
 
 // Init
-const FASTLY_API_TOKEN = inject('FASTLY_API_TOKEN') as String;
+const FASTLY_API_TOKEN = inject('FASTLY_API_TOKEN') as string;
 const toast = useToast();
 const props = defineProps({
   service_id: String
@@ -22,7 +33,7 @@ onBeforeUnmount(() => {
 });
 
 // Data
-const activities = ref([]);
+const activities = ref<Entity[]>([]);
 const cacheUser = new Map<string, string>();
 // Or use Computed()
 function refresh() {
@@ -44,7 +55,7 @@ function refresh() {
       });
     }
 
-    activities.value.forEach((activitie: Object) => {
+    activities.value.forEach((activitie: Entity) => {
       const user_id = activitie.attributes.user_id;
 
       if (!cacheUser.has(user_id)){
@@ -61,7 +72,7 @@ function refresh() {
         });
 
       } else {
-        activitie.attributes.username = cacheUser.get(user_id);
+        activitie.attributes.username = cacheUser.get(user_id) as string;
       }
     });
   });

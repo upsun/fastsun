@@ -8,9 +8,14 @@ import Button from "primevue/button";
 import ConfirmDialog from 'primevue/confirmdialog';
 import AclAPIService from './acl.api';
 import AclEntriesCard from './AclEntriesCard.vue';
+import type Identifiable from '@/components/base/type';
+
+interface Entity extends Identifiable {
+  entries: Identifiable[];
+}
 
 // Init
-const FASTLY_API_TOKEN = inject('FASTLY_API_TOKEN') as String;
+const FASTLY_API_TOKEN = inject('FASTLY_API_TOKEN') as string;
 const toast = useToast();
 const props = defineProps({
   service_id: String,
@@ -41,8 +46,8 @@ function refresh() {
       })
     }
 
-    acls.value.forEach( acl => {
-      aclService.getACLEntry(acl!.id)
+    acls.value.forEach( (acl: Entity) => {
+      aclService.getACLEntry(acl.id)
       .catch(error => {
         console.error(error);
         toast.add({ severity: 'error', summary: 'Error', detail: error, life: 3000 });
@@ -61,7 +66,7 @@ function openAclEditModal() {
   editAclDialog.value = true;
 };
 
-function closeAclEditModal(updated: Boolean) {
+function closeAclEditModal(updated: boolean) {
   editAclDialog.value = false;
   acl_selected.value = {};
 };
@@ -82,7 +87,7 @@ function addAcl() {
   openAclEditModal();
 }
 
-function editAcl(acl: any) {
+function editAcl(acl: Entity) {
   console.log("Edit " + acl.id);
 
   const clone = JSON.parse(JSON.stringify(acl))
@@ -90,7 +95,7 @@ function editAcl(acl: any) {
   openAclEditModal();
 }
 
-function confirmDeleteAcl(acl: any) {
+function confirmDeleteAcl(acl: Entity) {
   console.log("Delete " + acl.id);
 
   acl_selected.value = acl;
@@ -101,7 +106,7 @@ function deleteAcl() {
   console.log("Delete " + acl_selected.value.id);
 
   //TODO call remove API
-  acls.value = acls.value.filter((val: any) => val.id !== acl_selected.value.id);
+  acls.value = acls.value.filter((val: Entity) => val.id !== acl_selected.value.id);
   closeAclDeleteModal();
 
   toast.add({ severity: 'success', summary: 'Successful', detail: 'ACL Deleted', life: 3000 });

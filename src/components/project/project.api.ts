@@ -4,7 +4,7 @@ import axios, { type AxiosInstance } from "axios";
 export default class ProjectAPIService extends APIService {
   protected wsClientStat: AxiosInstance;
 
-  constructor(service_id: String, token: String) {
+  constructor(service_id: string, token: string) {
     super(service_id, token);
 
     this.wsClientStat = axios.create({
@@ -16,7 +16,7 @@ export default class ProjectAPIService extends APIService {
     });
   };
 
-  async getDomains(version_id: Number) {
+  async getDomains(version_id: number) {
     try  {
       const {data} = await this.wsClient.get(`service/${this.service_id}/version/${version_id}/domain`);
       return [null, data];

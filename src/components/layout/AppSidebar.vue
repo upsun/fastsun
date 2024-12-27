@@ -1,1 +1,3 @@
-<template></template>
+<template>
+  <aside id="sidebar"></aside>
+</template>

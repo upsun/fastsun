@@ -7,9 +7,14 @@ import Dialog from 'primevue/dialog';
 import Button from "primevue/button";
 import DomainAPIService from './domain.api';
 import DomainEntryCard from './DomainEntryCard.vue';
+import type Identifiable from '@/components/base/type';
+
+interface Entity extends Identifiable {
+  name: string;
+}
 
 // Init
-const FASTLY_API_TOKEN = inject('FASTLY_API_TOKEN') as String;
+const FASTLY_API_TOKEN = inject('FASTLY_API_TOKEN') as string;
 const toast = useToast();
 const props = defineProps({
   service_id: String,
@@ -48,7 +53,7 @@ function openDomainEditModal() {
   editDomainDialog.value = true;
 };
 
-function closeDomainEditModal(updated: Boolean) {
+function closeDomainEditModal(updated: boolean) {
   editDomainDialog.value = false;
   domain_selected.value = {};
 };
@@ -69,7 +74,7 @@ function addDomain() {
   openDomainEditModal();
 }
 
-function editDomain(domain: any) {
+function editDomain(domain: Entity) {
   console.log("Edit domain!");
 
   const clone = JSON.parse(JSON.stringify(domain))
@@ -77,7 +82,7 @@ function editDomain(domain: any) {
   openDomainEditModal();
 }
 
-function confirmDeleteDomain(domain: any) {
+function confirmDeleteDomain(domain: Entity) {
   console.log("Delete domain (check) : "+ domain.name);
 
   domain_selected.value = domain;
@@ -88,7 +93,7 @@ function deleteDomain() {
   console.log("Delete domain (make) :" + domain_selected.value.name);
 
   //TODO call remove API
-  domains.value = domains.value.filter((val: any) => val.id !== domain_selected.value.id);
+  domains.value = domains.value.filter((val: Entity) => val.id !== domain_selected.value.id);
   closeDomainDeleteModal();
 
   toast.add({ severity: 'success', summary: 'Successful', detail: 'Domain Deleted', life: 3000 });
