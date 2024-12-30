@@ -60,11 +60,13 @@ const chartOptions = ref({
 });
 
 onMounted(() => {
-  timer.value = setInterval(() => {
-    if (!lock.value) {
-      getNextStat();
-    }
-  }, 1000);
+  if (import.meta.env.DEV) {
+    timer.value = setInterval(() => {
+      if (!lock.value) {
+        getNextStat();
+      }
+    }, 1000);
+  }
 });
 
 // Clean up

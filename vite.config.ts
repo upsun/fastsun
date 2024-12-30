@@ -17,4 +17,14 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url))
     },
   },
+  build: {
+    emptyOutDir: false,
+    rollupOptions: {
+      output: {
+        entryFileNames: "[name].js",
+        inlineDynamicImports: true,
+        // manualChunks: {},
+      },
+    }
+  },
 })

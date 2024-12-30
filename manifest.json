@@ -1,0 +1,19 @@
+{
+    "_self": "https://master-7rqtwti-erwlgagf6enrq.eu-5.platformsh.site/manifest.json",
+    "url": "https://master-7rqtwti-erwlgagf6enrq.eu-5.platformsh.site/index.js",
+    "format": "amd",
+    "scopes": [],
+    "id": "erwlgagf6enrq",
+    "name": "FasltySun",
+    "hooks": [
+    {
+        "name": "project",
+        "route": "/:organizationId/:projectId/",
+        "type": "tab"
+    },
+    {
+        "name": "app-environment",
+        "route": "/:organizationId/:projectId/:environmentId/",
+        "type": "tab"
+    }]
+}

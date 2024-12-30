@@ -8,10 +8,10 @@ applications:
         "/":
           root: 'dist'
           index:
-            - "manifest.json"
+            - "index.html"
           headers:
             Access-Control-Allow-Origin: "*"
-          expires: 300
+          #expires: 300
           scripts: true
           allow: false
           rules:
@@ -26,6 +26,7 @@ applications:
         set -eux
         npm i
         npm run build
+        cp manifest.json dist/
       deploy: |
         set -eux
         # echo 'Put your deploy command here'
