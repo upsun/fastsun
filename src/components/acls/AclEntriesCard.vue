@@ -41,7 +41,7 @@ function refresh() {
   } else {
     headerTitle.value = 'Edit ACL';
     //TODO if need a copy : const clone = JSON.parse(JSON.stringify(props.acl_data?.entries));
-    entries.value = props.acl_data.entries.data;
+    entries.value = props.acl_data.entries;
   }
 }
 watchEffect(refresh);
@@ -68,7 +68,6 @@ function onRowEditSave(event: DataTableRowEditSaveEvent) {
 function saveACL() {
   //TODO Save by API
   // saveACL(acl
-  console.log(ip_selected.value);
 
   // if (true) {
   closeModal(true);
@@ -107,7 +106,6 @@ function deleteIp() {
 </script>
 
 <template>
-  <!-- <Form v-slot="$form" @submit="saveACL"  @submit.prevent="saveACL" class="flex flex-col gap-4 w-full sm:w-56"> -->
   <Dialog
     v-bind:visible="acl_state_dialog"
     @update:visible="closeModal"
@@ -200,7 +198,7 @@ function deleteIp() {
       <Button label="Save" icon="pi pi-check" @click="saveACL" />
     </template>
   </Dialog>
-  <!-- </Form> -->
+
   <Dialog
     v-model:visible="deleteIpDialog"
     :style="{ width: '450px' }"

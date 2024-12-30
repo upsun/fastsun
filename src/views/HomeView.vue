@@ -11,7 +11,7 @@ import ProjectAPIService from '@/components/project/project.service';
 import type ProjectEntity from '@/components/project/project.interface';
 
 const service_id = ref(inject('FASTLY_API_SERVICE') as string);
-const FASTLY_API_TOKEN = inject('FASTLY_API_TOKEN') as string;
+const service_token = inject('FASTLY_API_TOKEN') as string;
 const toast = useToast();
 
 // TODO get current version HERE !
@@ -21,7 +21,7 @@ const project_detail = ref<ProjectEntity>();
 function refresh() {
   console.log('Refresh Project Detail!');
 
-  const projectService = new ProjectAPIService(service_id.value, FASTLY_API_TOKEN);
+  const projectService = new ProjectAPIService(service_id.value, service_token);
   projectService
     .getProject()
     .then((result) => {
@@ -41,12 +41,7 @@ watchEffect(refresh);
 
 <template>
   <main>
-    <InfoCard
-      :service_id="service_id"
-      :vcl_version="vcl_version"
-      v-if="vcl_version >= 1"
-      :project_detail="project_detail"
-    /><br />
+    <InfoCard :service_id="service_id" :vcl_version="vcl_version" v-if="vcl_version >= 1" :project_detail="project_detail"/><br />
     <StatCard :service_id="service_id" /><br />
     <DomaCard :service_id="service_id" :vcl_version="vcl_version" v-if="vcl_version >= 1" /><br />
     <VersCard :service_id="service_id" /><br />

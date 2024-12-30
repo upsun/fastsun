@@ -10,7 +10,7 @@ export default interface ActivityEntity extends Identifiable {
 }
 
 export default interface UserEntity extends Identifiable {
-  username: string;
+  name: string;
 }
 
 export default interface ProjectEntity extends Identifiable {

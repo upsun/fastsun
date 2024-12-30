@@ -8,7 +8,7 @@ import ProjectAPIService from './project.service';
 import { eventBus, EventType } from '@/utils/eventBus';
 
 import type ActivityEntity from './project.interface';
-import type UserEntity from './project.interface';
+import UserCache from '@/stores/localStorage';
 
 // Init
 const FASTLY_API_TOKEN = inject('FASTLY_API_TOKEN') as string;
@@ -19,6 +19,7 @@ const props = defineProps({
     required: true,
   },
 });
+const cache = new UserCache();
 
 onMounted(() => {
   eventBus.on(EventType.LOG_REFRESH, refresh);
@@ -30,7 +31,6 @@ onBeforeUnmount(() => {
 
 // Data
 const activities = ref<ActivityEntity[]>([]);
-const cacheUser = new Map<string, string>();
 
 // Or use Computed()
 function refresh() {
@@ -39,8 +39,8 @@ function refresh() {
 
   projectService
     .getActivities()
-    .then((result) => {
-      activities.value = result;
+    .then((result_act) => {
+      activities.value = result_act;
 
       if (import.meta.env.DEV) {
         activities.value.forEach((activitie) => {
@@ -50,19 +50,20 @@ function refresh() {
 
       activities.value.forEach((activitie: ActivityEntity) => {
         const user_id = activitie.attributes.user_id;
+        const userInCache = cache.getUser(user_id);
 
-        if (!cacheUser.has(user_id)) {
+        if (!userInCache) {
           projectService
             .getUser(user_id)
-            .then((result) => {
-              cacheUser.set(user_id, result.name);
-              activitie.attributes.username = result.name;
+            .then((result_user) => {
+              cache.setUser(result_user);
+              activitie.attributes.username = result_user.name;
             })
             .catch((error) => {
               toast.add({ severity: 'error', summary: 'Error', detail: error, life: 3000 });
             });
         } else {
-          activitie.attributes.username = cacheUser.get(user_id) as string;
+          activitie.attributes.username = userInCache.name;
         }
       });
     })
