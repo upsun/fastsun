@@ -4,26 +4,23 @@ import { useToast } from 'primevue/usetoast';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import Button from "primevue/button"
-import ProjectAPIService from './project.api';
+import ProjectAPIService from './project.service';
 import { eventBus, EventType } from "@/utils/eventBus";
-import type Identifiable from '@/components/base/type';
 
+import type ActivityEntity from './project.interface';
+import type UserEntity from './project.interface';
 
-interface Attributes extends Identifiable {
-  user_id: string;
-  username: string;
-}
-
-interface Entity extends Identifiable {
-  attributes: Attributes;
-}
 
 // Init
 const FASTLY_API_TOKEN = inject('FASTLY_API_TOKEN') as string;
 const toast = useToast();
 const props = defineProps({
-  service_id: String
+  service_id: {
+    type: String,
+    required: true,
+  },
 });
+
 onMounted(() => {
   eventBus.on(EventType.LOG_REFRESH, refresh);
 })
@@ -33,21 +30,17 @@ onBeforeUnmount(() => {
 });
 
 // Data
-const activities = ref<Entity[]>([]);
+const activities = ref<ActivityEntity[]>([]);
 const cacheUser = new Map<string, string>();
+
 // Or use Computed()
 function refresh() {
   console.log("Refresh Activities History!");
   const projectService = new ProjectAPIService (props.service_id!, FASTLY_API_TOKEN);
 
   projectService.getActivities()
-  .catch(error => {
-    console.error(error);
-    toast.add({ severity: 'error', summary: 'Error', detail: error, life: 3000 });
-  })
   .then(result => {
-    const [error, data] = result;
-    activities.value = data.data;
+    activities.value = result;
 
     if (import.meta.env.DEV) {
       activities.value.forEach(activitie => {
@@ -55,26 +48,27 @@ function refresh() {
       });
     }
 
-    activities.value.forEach((activitie: Entity) => {
+    activities.value.forEach((activitie: ActivityEntity) => {
       const user_id = activitie.attributes.user_id;
 
       if (!cacheUser.has(user_id)){
 
         projectService.getUser(user_id)
-        .catch(error => {
-          console.error(error);
-          toast.add({ severity: 'error', summary: 'Error', detail: error, life: 3000 });
-        })
         .then(result => {
-          const [errorU, dataU] = result;
-          cacheUser.set(user_id, dataU.name);
-          activitie.attributes.username = dataU.name;
+          cacheUser.set(user_id, result.name);
+          activitie.attributes.username = result.name;
+        })
+        .catch(error => {
+          toast.add({ severity: 'error', summary: 'Error', detail: error, life: 3000 });
         });
 
       } else {
         activitie.attributes.username = cacheUser.get(user_id) as string;
       }
     });
+  })
+  .catch(error => {
+    toast.add({ severity: 'error', summary: 'Error', detail: error, life: 3000 });
   });
 };
 watchEffect(refresh);
@@ -89,7 +83,6 @@ watchEffect(refresh);
       <DataTable :value="activities" dataKey="id"
             resizableColumns columnResizeMode="fit"
             sortField="number" :sortOrder="-1" :defaultSortOrder="-1"
-
             :paginator="true" :rows="10" :rowsPerPageOptions="[5, 10, 20, 50]"
             paginatorTemplate="RowsPerPageDropdown FirstPageLink PrevPageLink CurrentPageReport NextPageLink LastPageLink"
             currentPageReportTemplate="{first} to {last} of {totalRecords}"

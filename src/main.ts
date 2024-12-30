@@ -19,7 +19,7 @@ import App from './App.vue';
 import router from './router';
 
 const  dateTimeFormats = () => ({
-  'en': {
+  'en-US': {
     short: {
       year: 'numeric', month: 'short', day: 'numeric'
     },
@@ -28,7 +28,7 @@ const  dateTimeFormats = () => ({
       hour: 'numeric', minute: 'numeric'
     }
   },
-  'fr': {
+  'fr-FR': {
     short: {
       day: 'numeric', month: 'short', year: 'numeric',
     },
@@ -40,9 +40,9 @@ const  dateTimeFormats = () => ({
 });
 const i18n = createI18n({
   // something vue-i18n options here ...
-  locale: 'en',
-  fallbackLocale: 'en',
-  availableLocales: ['fr', 'en'],
+  locale: 'en-US',
+  fallbackLocale: 'en-US',
+  availableLocales: ['fr-FR', 'en-US'],
   datetimeFormats: dateTimeFormats(),
 })
 

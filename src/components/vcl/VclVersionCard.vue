@@ -4,45 +4,43 @@ import { useToast } from 'primevue/usetoast';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import Button from "primevue/button";
-import VclAPIService from './vcl.api';
-import DisplayVclCard from './DisplayVclCard.vue';
-import type Identifiable from '@/components/base/type';
 
-interface Entity extends Identifiable {
-  number: string;
-  contentHtml: string;
-  contentRaw: string;
-}
+import DisplayVclCard from './VclDisplayCard.vue';
+import VclAPIService from './vcl.service';
+import type VclEntity from './vcl.interface';
+
 
 // Init
 const FASTLY_API_TOKEN = inject('FASTLY_API_TOKEN') as string;
 const toast = useToast();
 const props = defineProps({
-  service_id: String
+  service_id: {
+    type: String,
+    required: true,
+  },
 });
 
 // Data
-const versions = ref<Entity[]>([]);
-const vcl_selected = ref<Entity>();
-const displayVclDialog = ref(false);
+const versions = ref<VclEntity[]>([]);
+const vcl_selected = ref<VclEntity>();
+const displayVclDialog = ref<boolean>(false);
+
 function refresh() {
   console.log("Refresh Version History!");
   const vclService = new VclAPIService(props.service_id!, FASTLY_API_TOKEN);
 
   vclService.getVersions()
-  .catch(error => {
-    console.error(error);
-    toast.add({ severity: 'error', summary: 'Error', detail: error, life: 3000 });
-  })
   .then(result => {
-    const [error, data] = result;
-    versions.value = data;
+    versions.value = result;
 
     if (import.meta.env.DEV) {
       versions.value.forEach(version => {
         console.log(toRaw(version));
       });
     }
+  })
+  .catch(error => {
+    toast.add({ severity: 'error', summary: 'Error', detail: error, life: 3000 });
   });
 };
 watchEffect(refresh);
@@ -52,27 +50,28 @@ function openVclDisplayModal() {
   displayVclDialog.value = true;
 };
 
-function closeVclDisplayModal(updated: boolean) {
+function closeVclDisplayModal() {
   displayVclDialog.value = false;
-  vcl_selected.value = {} as Entity;
+  vcl_selected.value = {} as VclEntity;
 };
 
-function showVCL(data: Entity) {
+function showVCL(data: VclEntity) {
   console.log("Display VCL!");
 
   const vclService = new VclAPIService(props.service_id!, FASTLY_API_TOKEN);
   vclService.getVCL(data.number)
-  .catch(error => {
-    console.error(error);
-    toast.add({ severity: 'error', summary: 'Error', detail: error, life: 3000 });
-  })
   .then(result => {
-    const [dataRaw, dataHtml] = result;
     vcl_selected.value = data;
+
     // Extra content
+    const [dataRaw, dataHtml] = result;
     vcl_selected.value!.contentHtml = dataHtml.content;
     vcl_selected.value!.contentRaw = dataRaw.content;
+
     openVclDisplayModal();
+  })
+  .catch(error => {
+    toast.add({ severity: 'error', summary: 'Error', detail: error, life: 3000 });
   });
 }
 </script>
@@ -83,11 +82,8 @@ function showVCL(data: Entity) {
     <template #content>
       <DataTable :value="versions" dataKey="id"
             stripedRows
-
             resizableColumns columnResizeMode="fit"
-
             sortField="number" :sortOrder="-1" :defaultSortOrder="-1"
-
             :paginator="true" :rows="5" :rowsPerPageOptions="[5, 10, 20, 50]"
             paginatorTemplate="RowsPerPageDropdown FirstPageLink PrevPageLink CurrentPageReport NextPageLink LastPageLink"
             currentPageReportTemplate="{first} to {last} of {totalRecords}"

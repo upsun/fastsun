@@ -1,16 +1,25 @@
 <script setup lang="ts">
 import { inject, ref, watchEffect } from 'vue';
-import PurgesCard from '@/components/purges/PurgesCard.vue';
+import PurgesCard from '@/components/purges/PurgeCard.vue';
 
 // Init
 const props = defineProps({
-  service_id: String,
-  project_detail: Object,
-  vcl_version: Number
+  service_id: {
+    type: String,
+    required: true,
+  },
+  project_detail: {
+    type: Object,
+    required: true,
+  },
+  vcl_version: {
+    type: Number,
+    required: true,
+  },
 });
 
 // Data
-const upsun_id = ref("Not define")
+
 </script>
 
 <template>

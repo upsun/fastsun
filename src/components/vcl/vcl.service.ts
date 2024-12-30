@@ -1,4 +1,6 @@
 import APIService from "../base/api";
+import type VclEntity from "./vcl.interface";
+import type VclContentEntity from "./vcl.interface";
 
 export default class VclAPIService extends APIService {
 
@@ -6,45 +8,44 @@ export default class VclAPIService extends APIService {
     super(service_id, token);
   };
 
-  async getVersions() {
+  async getVersions() : Promise<VclEntity[]> {
     try  {
-      const {data} = await this.wsClient.get(`service/${this.service_id}/version`);
-      return [null, data];
+      const response = await this.wsClient.get(`service/${this.service_id}/version`);
+      return response.data;
     } catch (error) {
       console.error(error);
-      return [error];
+      throw error;
     }
   }
 
   async validate(version_id: string) {
     try  {
-      const {data} = await this.wsClient.get(`service/${this.service_id}/version/${version_id}/validate`);
-      return [null, data];
+      const response = await this.wsClient.get(`service/${this.service_id}/version/${version_id}/validate`);
+      return response.data;
     } catch (error) {
       console.error(error);
-      return [error];
+      throw error;
     }
   }
 
   async activate(version_id: string) {
     try  {
-      const {data} = await this.wsClient.put(`service/${this.service_id}/version/${version_id}/activate`);
-      return [null, data];
+      const response = await this.wsClient.put(`service/${this.service_id}/version/${version_id}/activate`);
+      return response.data;
     } catch (error) {
       console.error(error);
-      return [error];
+      throw error;
     }
   }
 
-  async getVCL(version_id: string)
-  {
+  async getVCL(version_id: string) : Promise<[VclContentEntity, VclContentEntity]> {
     try  {
       const responseHtml = await this.wsClient.get(`service/${this.service_id}/version/${version_id}/generated_vcl/content`);
       const responseRaw = await this.wsClient.get(`service/${this.service_id}/version/${version_id}/generated_vcl`);
       return [responseRaw.data, responseHtml.data];
     } catch (error) {
       console.error(error);
-      return [error];
+      throw error;
     }
   }
 }

@@ -5,25 +5,29 @@ import DataTable, { type DataTableRowEditSaveEvent } from 'primevue/datatable';
 import Column from 'primevue/column';
 import Dialog from 'primevue/dialog';
 import InputText from 'primevue/inputtext';
-import type Identifiable from '@/components/base/type';
 
-interface Entity extends Identifiable {
-  ip: string;
-}
+import type AclItemEntity from './acl.interface';
+
 
 // Init
 const emit = defineEmits(["update:visible"]);
 const toast = useToast();
 const props = defineProps({
-  acl_data: Object,
-  acl_state_dialog: Boolean,
+  acl_data: {
+    type: Object,
+    resuired: true,
+  },
+  acl_state_dialog: {
+    type: Boolean,
+    resuired: true,
+  },
 });
 
 // Data
 const submitted = ref<boolean>(false);
 const headerTitle = ref<string>("ACL");
-const entries = ref<Entity[]>([]);
-const ip_selected = ref<Entity>();
+const entries = ref<AclItemEntity[]>([]);
+const ip_selected = ref<AclItemEntity>();
 const deleteIpDialog = ref<boolean>(false);
 const editingRows = ref([]);
 const idCounter = ref<number>(-1);
@@ -53,7 +57,7 @@ function openIpDeleteModal() {
 
 function closeIpDeleteModal() {
   deleteIpDialog.value = false;
-  ip_selected.value = {} as Entity;
+  ip_selected.value = {} as AclItemEntity;
 }
 
 function onRowEditSave(event: DataTableRowEditSaveEvent) {
@@ -73,7 +77,7 @@ function saveACL() {
 }
 
 function addIp() {
-  const finded = entries.value.find((entrie: Entity) => {
+  const finded = entries.value.find((entrie: AclItemEntity) => {
     return entrie.ip == "0.0.0.0";
   });
 
@@ -85,7 +89,7 @@ function addIp() {
 }
 
 function confirmDeleteAclEntry(index: number) {
-  const ip = entries.value[index] as Entity;
+  const ip = entries.value[index];
   console.log("Delete Ip (check) : "+ ip.id);
 
   ip_selected.value = ip;
@@ -96,7 +100,7 @@ function deleteIp() {
   if (ip_selected.value != null) {
     console.log("Delete domain (make) :" + ip_selected.value.ip);
 
-    entries.value = entries.value.filter((val: Entity) => val.id !== ip_selected.value!.id);
+    entries.value = entries.value.filter((val) => val.id !== ip_selected.value!.id);
     closeIpDeleteModal();
   }
 }

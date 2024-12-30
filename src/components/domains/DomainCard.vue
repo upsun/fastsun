@@ -5,57 +5,68 @@ import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import Dialog from 'primevue/dialog';
 import Button from "primevue/button";
-import DomainAPIService from './domain.api';
-import DomainEntryCard from './DomainEntryCard.vue';
-import type Identifiable from '@/components/base/type';
 
-interface Entity extends Identifiable {
-  name: string;
-}
+import DomainEntryCard from './DomainEntryCard.vue';
+import DomainAPIService from './domain.service';
+import type DomainEntity from './domain.interface';
+
 
 // Init
 const FASTLY_API_TOKEN = inject('FASTLY_API_TOKEN') as string;
 const toast = useToast();
 const props = defineProps({
-  service_id: String,
-  vcl_version: Number
+  service_id: {
+    type: String,
+    resuired: true,
+  },
+  vcl_version: {
+    type: Number,
+    required: true,
+  },
 });
 
 // Data
-const domains = ref([]);
-const domain_selected = ref();
-const deleteDomainDialog = ref(false);
-const editDomainDialog = ref(false);
+const domains = ref<DomainEntity[]>([]);
+const domain_selected = ref<DomainEntity>();
+const deleteDomainDialog = ref<boolean>(false);
+const editDomainDialog = ref<boolean>(false);
+
 function refresh() {
   console.log("Refresh Domain!");
   const projectService = new DomainAPIService(props.service_id!, FASTLY_API_TOKEN);
 
   projectService.getDomains(props.vcl_version!)
-  .catch(error => {
-    console.error(error);
-    toast.add({ severity: 'error', summary: 'Error', detail: error, life: 3000 });
-  })
   .then(result => {
-    const [error, data] = result;
-    domains.value = data;
+    domains.value = result;
 
     if (import.meta.env.DEV) {
       domains.value.forEach(domain => {
         console.log(toRaw(domain));
       })
     }
+  })
+  .catch(error => {
+    toast.add({ severity: 'error', summary: 'Error', detail: error, life: 3000 });
   });
 };
 watchEffect(refresh);
 
 // Events
+function cleanSelected() {
+  domain_selected.value = {} as DomainEntity;
+}
+
+function setSelected(domain: DomainEntity) {
+  domain_selected.value = domain;
+}
+
 function openDomainEditModal() {
   editDomainDialog.value = true;
 };
 
 function closeDomainEditModal(updated: boolean) {
   editDomainDialog.value = false;
-  domain_selected.value = {};
+  cleanSelected()
 };
 
 function openDomainDeleteModal() {
@@ -64,39 +75,41 @@ function openDomainDeleteModal() {
 
 function closeDomainDeleteModal() {
   deleteDomainDialog.value = false;
-  domain_selected.value = {};
+  cleanSelected()
 }
 
 function addDomain() {
   console.log("Add domain!");
 
-  domain_selected.value = {};
+  cleanSelected()
   openDomainEditModal();
 }
 
-function editDomain(domain: Entity) {
-  console.log("Edit domain!");
+function editDomain(domain: DomainEntity) {
+  console.log("Edit domain: " + domain.id);
 
   const clone = JSON.parse(JSON.stringify(domain))
-  domain_selected.value = clone;
+  setSelected(clone);
   openDomainEditModal();
 }
 
-function confirmDeleteDomain(domain: Entity) {
-  console.log("Delete domain (check) : "+ domain.name);
+function confirmDeleteDomain(domain: DomainEntity) {
+  console.log("Delete domain (check): "+ domain.name);
 
-  domain_selected.value = domain;
+  setSelected(domain);
   openDomainDeleteModal();
 }
 
 function deleteDomain() {
-  console.log("Delete domain (make) :" + domain_selected.value.name);
+  if (domain_selected.value) {
+    console.log("Delete domain (make):" + domain_selected.value.name);
 
-  //TODO call remove API
-  domains.value = domains.value.filter((val: Entity) => val.id !== domain_selected.value.id);
-  closeDomainDeleteModal();
+    //TODO call remove API
+    domains.value = domains.value.filter((val) => val.id !== domain_selected.value!.id);
+    closeDomainDeleteModal();
 
-  toast.add({ severity: 'success', summary: 'Successful', detail: 'Domain Deleted', life: 3000 });
+    toast.add({ severity: 'success', summary: 'Successful', detail: 'Domain Deleted', life: 3000 });
+  }
 }
 </script>
 

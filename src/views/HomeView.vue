@@ -2,12 +2,12 @@
 import { inject, ref, toRaw, watchEffect } from 'vue'
 import { useToast } from 'primevue/usetoast';
 import AclsCard from '@/components/acls/AclCard.vue';
-import DomaCard from '@/components/domains/DomainsCard.vue';
+import DomaCard from '@/components/domains/DomainCard.vue';
 import HistCard from '@/components/project/HistoryCard.vue';
 import InfoCard from '@/components/project/InfoCard.vue';
 import StatCard from '@/components/project/StatCard.vue';
-import VersCard from '@/components/vcl/VersionsCard.vue';
-import ProjectAPIService from '@/components/project/project.api';
+import VersCard from '@/components/vcl/VclVersionCard.vue';
+import ProjectAPIService from '@/components/project/project.service';
 
 
 const service_id = ref(inject("FASTLY_API_SERVICE") as string);
@@ -23,18 +23,16 @@ function refresh() {
 
   const projectService = new ProjectAPIService (service_id.value, FASTLY_API_TOKEN);
   projectService.getProject()
-  .catch(error => {
-    console.error(error);
-    toast.add({ severity: 'error', summary: 'Error', detail: error, life: 3000 });
-  })
   .then(result => {
-    const [errorU, dataU] = result;
-    project_detail.value = dataU;
-    vcl_version.value = dataU.active_version.number; // Can be refactor with project_detail.
+    project_detail.value = result;
+    vcl_version.value = result.active_version.number; // Can be refactor with project_detail.
 
     if (import.meta.env.DEV) {
       console.log(toRaw(project_detail.value));
     }
+  })
+  .catch(error => {
+    toast.add({ severity: 'error', summary: 'Error', detail: error, life: 3000 });
   });
 };
 watchEffect(refresh);

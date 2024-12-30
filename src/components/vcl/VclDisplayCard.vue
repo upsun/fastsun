@@ -3,10 +3,16 @@ import { ref } from 'vue';
 import Dialog from 'primevue/dialog';
 
 // Init
-const copied = ref("Copy");
+const copied = ref<string>("Copy");
 const props = defineProps({
-  vcl_data: Object,
-  vcl_state_dialog: Boolean,
+  vcl_data: {
+    type: Object,
+    required: true,
+  },
+  vcl_state_dialog: {
+    type: Boolean,
+    required: true,
+  },
 });
 
 function copy(content: string) {

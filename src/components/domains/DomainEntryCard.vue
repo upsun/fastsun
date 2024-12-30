@@ -4,17 +4,26 @@ import { useToast } from 'primevue/usetoast';
 import Dialog from 'primevue/dialog';
 import InputText from 'primevue/inputtext';
 
+import type DomainEntity from './domain.interface';
+
+
 // Init
 const emit = defineEmits(["update:visible"]);
 const toast = useToast();
 const props = defineProps({
-  domain_data: Object,
-  domain_state_dialog: Boolean,
+  domain_data: {
+    type: Object,
+    required: true,
+  },
+  domain_state_dialog: {
+    type: Boolean,
+    required: true,
+  },
 });
 
 // Data
-const submitted = ref(false);
-const headerTitle = ref("Domain");
+const submitted = ref<boolean>(false);
+const headerTitle = ref<string>("Domain");
 
 function refresh() {
   console.log("Load Domain entity!");

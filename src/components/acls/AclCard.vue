@@ -5,70 +5,79 @@ import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import Dialog from 'primevue/dialog';
 import Button from "primevue/button";
-import ConfirmDialog from 'primevue/confirmdialog';
-import AclAPIService from './acl.api';
-import AclEntriesCard from './AclEntriesCard.vue';
-import type Identifiable from '@/components/base/type';
 
-interface Entity extends Identifiable {
-  entries: Identifiable[];
-}
+import AclEntriesCard from './AclEntriesCard.vue';
+import AclAPIService from './acl.service';
+import type AclEntity from './acl.interface';
+
 
 // Init
 const FASTLY_API_TOKEN = inject('FASTLY_API_TOKEN') as string;
 const toast = useToast();
 const props = defineProps({
-  service_id: String,
-  vcl_version: Number
+  service_id: {
+    type: String,
+    required: true,
+  },
+  vcl_version: {
+    type: Number,
+    required: true,
+  },
 });
 
 // Data
-const acls = ref([]);
-const acl_selected = ref();
-const deleteAclDialog = ref(false);
-const editAclDialog = ref(false);
+const acls = ref<AclEntity[]>([]);
+const acl_selected = ref<AclEntity>();
+const deleteAclDialog = ref<boolean>(false);
+const editAclDialog = ref<boolean>(false);
+
 function refresh() {
   console.log("Refresh ACL!");
   const aclService = new AclAPIService(props.service_id!, FASTLY_API_TOKEN);
 
   aclService.getACL(props.vcl_version!)
-  .catch(error => {
-    console.error(error);
-    toast.add({ severity: 'error', summary: 'Error', detail: error, life: 3000 });
-  })
   .then(result => {
-    const [error, data] = result
-    acls.value = data;
+    acls.value = result;
+    cleanSelected();
 
-    if (import.meta.env.DEV) {
+    if (import.meta.env.DEV) { //DEBUG
       acls.value.forEach(acl => {
         console.log(toRaw(acl));
       })
     }
 
-    acls.value.forEach( (acl: Entity) => {
+    acls.value.forEach( (acl: AclEntity) => {
       aclService.getACLEntry(acl.id)
-      .catch(error => {
-        console.error(error);
-        toast.add({ severity: 'error', summary: 'Error', detail: error, life: 3000 });
-      })
       .then(result => {
-        const [error, data] = result;
-        acl.entries = data;
+        acl.entries = result;
+      })
+      .catch(error => {
+        toast.add({ severity: 'error', summary: 'Error', detail: error, life: 3000 });
       });
     });
+  })
+  .catch(error => {
+    toast.add({ severity: 'error', summary: 'Error', detail: error, life: 3000 });
   });
 };
 watchEffect(refresh);
 
 // Events
+function cleanSelected() {
+  acl_selected.value = {} as AclEntity;
+}
+
+function setSelected(acl: AclEntity) {
+  acl_selected.value = acl;
+}
+
 function openAclEditModal() {
   editAclDialog.value = true;
 };
 
 function closeAclEditModal(updated: boolean) {
   editAclDialog.value = false;
-  acl_selected.value = {};
+  cleanSelected();
 };
 
 function openAclDeleteModal() {
@@ -77,39 +86,41 @@ function openAclDeleteModal() {
 
 function closeAclDeleteModal() {
   deleteAclDialog.value = false;
-  acl_selected.value = {};
+  cleanSelected();
 }
 
 function addAcl() {
-  console.log("Add ACL !");
+  console.log("Add ACL!");
 
-  acl_selected.value = {};
+  cleanSelected();
   openAclEditModal();
 }
 
-function editAcl(acl: Entity) {
-  console.log("Edit " + acl.id);
+function editAcl(acl: AclEntity) {
+  console.log("Edit ACL: " + acl.id);
 
   const clone = JSON.parse(JSON.stringify(acl))
-  acl_selected.value = clone;
+  setSelected(clone);
   openAclEditModal();
 }
 
-function confirmDeleteAcl(acl: Entity) {
-  console.log("Delete " + acl.id);
+function confirmDeleteAcl(acl: AclEntity) {
+  console.log("Delete ACL: (check): " + acl.id);
 
-  acl_selected.value = acl;
+  setSelected(acl);
   openAclDeleteModal();
 }
 
 function deleteAcl() {
-  console.log("Delete " + acl_selected.value.id);
+  if (acl_selected.value) {
+    console.log("Delete ACL (make): " + acl_selected.value.id);
 
-  //TODO call remove API
-  acls.value = acls.value.filter((val: Entity) => val.id !== acl_selected.value.id);
-  closeAclDeleteModal();
+    //TODO call remove API
+    acls.value = acls.value.filter((val: AclEntity) => val.id !== acl_selected.value!.id);
+    closeAclDeleteModal();
 
-  toast.add({ severity: 'success', summary: 'Successful', detail: 'ACL Deleted', life: 3000 });
+    toast.add({ severity: 'success', summary: 'Successful', detail: 'ACL Deleted', life: 3000 });
+  }
 }
 </script>
 
@@ -117,125 +128,50 @@ function deleteAcl() {
   <Card>
     <template #title v-if="false">Acces Control List</template>
     <template #content>
-  <!-- <Button label="Click me" /> -->
-  <!-- <li v-for="acl in acls" :key="acl.id">
-    {{ acl.name }}<br />
-    [{{ acl.id }}]
-    <li v-for="entry in acl.entries" :key="entry.id">
-      {{ entry.ip }}
-    </li>
-  </li> -->
-  <!-- <Toolbar class="mb-6">
-    <template #start>
-      <Button label="New" icon="pi pi-plus" class="mr-2" @click="openNew" />
-      <Button label="Delete" icon="pi pi-trash" severity="danger" outlined @click="confirmDeleteSelected" :disabled="!selectedProducts || !selectedProducts.length" />
-    </template>
-
-    <template #end>
-      <FileUpload mode="basic" accept="image/*" :maxFileSize="1000000" label="Import" customUpload chooseLabel="Import" class="mr-2" auto :chooseButtonProps="{ severity: 'secondary' }" />
-      <Button label="Export" icon="pi pi-upload" severity="secondary" @click="exportCSV($event)" />
-    </template>
-  </Toolbar> -->
-  <ConfirmDialog></ConfirmDialog>
-  <DataTable :value="acls" dataKey="id"
-        stripedRows
-
-        resizableColumns columnResizeMode="fit"
-
-        sortField="updated_at" :sortOrder="-1"
-
-        :paginator="true" :rows="5" :rowsPerPageOptions="[5, 10, 20, 50]"
-        paginatorTemplate="RowsPerPageDropdown FirstPageLink PrevPageLink CurrentPageReport NextPageLink LastPageLink"
-        currentPageReportTemplate="{first} to {last} of {totalRecords}"
-        >
-        <!--
-        editMode="cell" @cell-edit-complete="onCellEditComplete"
-        :pt="{
-            table: { style: 'min-width: 50rem' },
-            column: {
-                bodycell: ({ state }) => ({
-                    class: [{ '!py-0': state['d_editing'] }]
-                })
-            }
-        }"
-        tableStyle="min-width: 50rem" v-model:expandedRows="expandedRows" @rowExpand="onRowExpand" @rowCollapse="onRowCollapse" -->
-    <template #paginatorstart>
-        <Button type="button" icon="pi pi-refresh" text  @click="refresh"/>
-    </template>
-    <template #paginatorend>
-        <Button type="button" v-if="false" icon="pi pi-download" text />
-    </template>
-    <template #header>
-      <div class="flex flex-wrap gap-2 items-center justify-between">
-            <h4 class="m-0" style="display: inline-flex;">Manage ACL</h4>
-            <Button label="Add" icon="pi pi-plus" size="small" class="mr-2" style="margin-left: auto;" @click="addAcl()" />
-            <!-- <IconField>
-                <InputIcon>
-                    <i class="pi pi-search" />
-                </InputIcon>
-                <InputText v-model="filters['global'].value" placeholder="Search..." />
-            </IconField> -->
-            <!-- <div class="">
-              <Button text icon="pi pi-plus" label="Expand All" @click="expandAll" />
-              <Button text icon="pi pi-minus" label="Collapse All" @click="collapseAll" />
-            </div> -->
-        </div>
-        <!-- <div class="flex flex-wrap items-center justify-between gap-2">
-            <span class="text-xl font-bold">Products</span>
-            <Button icon="pi pi-refresh" rounded raised />
-        </div> -->
-
-    </template>
-    <template #empty> No ACL found. </template>
-    <template #loading> Loading ACLs data. Please wait. </template>
-    <!-- <Column selectionMode="multiple" headerStyle="width: 3rem"></Column> -->
-    <!-- <Column expander style="width: 5rem" /> -->
-    <!-- <Column field="id" header="ID" sortable style="width: 25%"></Column> -->
-    <Column field="name" header="Name" sortable></Column>
-    <Column field="created_at" header="Created at (UTC)" sortable>
-      <template #body="slotProps">
-        <span>{{ $d(slotProps.data.created_at, 'long') }}</span>
-      </template>
-    </Column>
-    <Column field="updated_at" header="Updated at (UTC)" sortable>
-      <template #body="slotProps">
-        <span>{{ $d(slotProps.data.updated_at, 'long') }}</span>
-      </template>
-    </Column>
-    <Column :exportable="false" style="min-width: 8rem" header="Actions">
-        <template #body="slotProps">
-            <Button icon="pi pi-pencil" outlined rounded class="mr-2" @click="editAcl(slotProps.data)" />
-            <Button icon="pi pi-trash" outlined rounded severity="danger" @click="confirmDeleteAcl(slotProps.data)" />
+      <DataTable :value="acls" dataKey="id"
+            stripedRows
+            resizableColumns columnResizeMode="fit"
+            sortField="updated_at" :sortOrder="-1"
+            :paginator="true" :rows="5" :rowsPerPageOptions="[5, 10, 20, 50]"
+            paginatorTemplate="RowsPerPageDropdown FirstPageLink PrevPageLink CurrentPageReport NextPageLink LastPageLink"
+            currentPageReportTemplate="{first} to {last} of {totalRecords}"
+            >
+        <template #paginatorstart>
+            <Button type="button" icon="pi pi-refresh" text  @click="refresh"/>
         </template>
-    </Column>
-    <!-- <Column field="entries.data" header="Entity" sortable></Column> -->
-    <!-- <template #expansion="slotProps">
-        <div class="p-4">
-            <h5>IPs for {{ slotProps.data.name }}</h5>
-            <DataTable :value="slotProps.data.entries.data">
-                <Column field="id" header="Id" sortable></Column>
-                <Column field="customer" header="Customer" sortable></Column>
-                <Column field="date" header="Date" sortable></Column>
-                <Column field="amount" header="Amount" sortable>
-                    <template #body="slotProps">
-                        {{ formatCurrency(slotProps.data.amount) }}
-                    </template>
-                </Column>
-                <Column field="status" header="Status" sortable>
-                    <template #body="slotProps">
-                        <Tag :value="slotProps.data.status.toLowerCase()" :severity="getOrderSeverity(slotProps.data)" />
-                    </template>
-                </Column>
-                <Column headerStyle="width:4rem">
-                    <template #body>
-                        <Button icon="pi pi-search" />
-                    </template>
-                </Column>
-            </DataTable>
-        </div>
-    </template> -->
-  </DataTable>
-  </template>
+        <template #paginatorend>
+            <Button type="button" v-if="false" icon="pi pi-download" text />
+        </template>
+        <template #header>
+          <div class="flex flex-wrap gap-2 items-center justify-between">
+                <h4 class="m-0" style="display: inline-flex;">Manage ACL</h4>
+                <Button label="Add" icon="pi pi-plus" size="small" class="mr-2" style="margin-left: auto;" @click="addAcl()" />
+            </div>
+        </template>
+        <template #empty> No ACL found. </template>
+        <template #loading> Loading ACLs data. Please wait. </template>
+        <!-- <Column selectionMode="multiple" headerStyle="width: 3rem"></Column> -->
+        <!-- <Column expander style="width: 5rem" /> -->
+        <!-- <Column field="id" header="ID" sortable style="width: 25%"></Column> -->
+        <Column field="name" header="Name" sortable></Column>
+        <Column field="created_at" header="Created at (UTC)" sortable>
+          <template #body="slotProps">
+            <span>{{ $d(slotProps.data.created_at, 'long') }}</span>
+          </template>
+        </Column>
+        <Column field="updated_at" header="Updated at (UTC)" sortable>
+          <template #body="slotProps">
+            <span>{{ $d(slotProps.data.updated_at, 'long') }}</span>
+          </template>
+        </Column>
+        <Column :exportable="false" style="min-width: 8rem" header="Actions">
+            <template #body="slotProps">
+                <Button icon="pi pi-pencil" outlined rounded class="mr-2" @click="editAcl(slotProps.data)" />
+                <Button icon="pi pi-trash" outlined rounded severity="danger" @click="confirmDeleteAcl(slotProps.data)" />
+            </template>
+        </Column>
+      </DataTable>
+    </template>
   </Card>
 
   <AclEntriesCard v-if="editAclDialog" :acl_data="acl_selected" :acl_state_dialog="editAclDialog" @update:visible="closeAclEditModal" />

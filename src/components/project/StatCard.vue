@@ -2,7 +2,7 @@
 import { inject, ref, onBeforeUnmount, onMounted } from 'vue';
 import { useToast } from 'primevue/usetoast';
 import Chart from 'primevue/chart';
-import ProjectAPIService from './project.api';
+import ProjectAPIService from './project.service';
 import 'chartjs-adapter-date-fns';
 
 // Init
@@ -10,15 +10,17 @@ const sampleCount = 20;
 const FASTLY_API_TOKEN = inject('FASTLY_API_TOKEN') as string;
 const toast = useToast();
 const props = defineProps({
-  service_id: String,
-  vcl_version: Number
+  service_id: {
+    type: String,
+    required: true,
+  },
 });
 
 // Data
 const timer = ref();
-const lock = ref();
+const lock = ref<boolean>(false);
 const chartInstance = ref();
-const s = new Date().valueOf();
+
 const chartData = {
   labels: [],
   datasets: [
@@ -75,24 +77,22 @@ function getNextStat() {
   const projectService = new ProjectAPIService(props.service_id!, FASTLY_API_TOKEN);
 
   projectService.getStat()
-  .catch(error => {
-    console.error(error);
-    toast.add({ severity: 'error', summary: 'Error', detail: error, life: 3000 });
-  })
   .then(result => {
-    const [error, data] = result;
-
-    if (data.Data.length > 0) {
+    if (result.Data.length > 0) {
       const chart = chartInstance.value.chart;
       if (chart.data.labels.length >= sampleCount) {
         chart.data.labels = chart.data.labels.slice(1);
         chart.data.datasets[0].data = chart.data.datasets[0].data.slice(1);
       }
       chart.data.labels.push(new Date().valueOf());
-      chart.data.datasets[0].data.push(data.Data[0].aggregated.requests)
+      chart.data.datasets[0].data.push(result.Data[0].aggregated.requests)
       chart.update()
     }
-  }).finally(() => {
+  })
+  .catch(error => {
+    toast.add({ severity: 'error', summary: 'Error', detail: error, life: 3000 });
+  })
+  .finally(() => {
     lock.value = false;
   });
 };

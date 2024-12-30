@@ -8,21 +8,21 @@ export default class PurgeAPIService extends APIService {
 
   async purgeAll() {
     try  {
-      const {data} = await this.wsClient.post(`service/${this.service_id}/purge_all`);
-      return [null, data];
+      const response = await this.wsClient.post(`service/${this.service_id}/purge_all`);
+      return response.data;
     } catch (error) {
       console.error(error);
-      return [error];
+      throw error;
     }
   }
 
   async purgeUrl(url: string) {
     try  {
-      const {data} = await this.wsClient.post(`purge/${url}`);
-      return [null, data];
+      const response = await this.wsClient.post(`purge/${url}`);
+      return response.data;
     } catch (error) {
       console.error(error);
-      return [error];
+      throw error;
     }
   }
 }

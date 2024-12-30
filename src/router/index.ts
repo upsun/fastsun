@@ -1,4 +1,4 @@
-import AppLayout from '@/components/layout/AppLayout.vue';
+import AppLayout from '@/layout/AppLayout.vue';
 import { createRouter, createWebHistory } from 'vue-router'
 
 const router = createRouter({
@@ -10,9 +10,16 @@ const router = createRouter({
       component: AppLayout,
       children: [
         {
-            path: '/',
+            path: '',
             name: 'dashboard',
-            component: () => import('@/views/HomeView.vue')
+            component: () => import('@/views/HomeView.vue'),
+            children: [
+              {
+                path: 'acl/$id',
+                name: 'Acl edit',
+                component: () => import('@/views/HomeView.vue'),
+              }
+            ]
         }
       ]
     },
