@@ -15,8 +15,15 @@ export default class AclAPIService extends APIService {
    */
   async getACL(version: number): Promise<AclEntity[]> {
     try {
-      const response = await this.wsClient.get(`service/${this.service_id}/version/${version}/acl`);
-      return response.data;
+      const options = { method:'GET', headers:this.headers } as RequestInit;
+      const url = this.baseUrl + `service/${this.service_id}/version/${version}/acl`;
+      const response = await fetch(url, options);
+      const data = await response.json();
+      return data;
+
+    // try {
+    //   const response = await this.wsClient.get(`service/${this.service_id}/version/${version}/acl`);
+    //   return response.data;
     } catch (error) {
       console.error(error);
       throw error;

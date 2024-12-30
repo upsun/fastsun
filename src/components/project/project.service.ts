@@ -13,10 +13,7 @@ export default class ProjectAPIService extends APIService {
 
     this.wsClientStat = axios.create({
       baseURL: 'https://rt.fastly.com/v1/channel/',
-      headers: {
-        'Fastly-Key': token,
-        Accept: 'application/json',
-      },
+      headers: this.headers,
     });
   }
 
@@ -44,8 +41,14 @@ export default class ProjectAPIService extends APIService {
 
   async getProject(): Promise<ProjectEntity> {
     try {
-      const response = await this.wsClient.get(`service/${this.service_id}/details`);
-      return response.data;
+      const options = { method:'GET', headers:this.headers } as RequestInit;
+      const url = this.baseUrl + `service/${this.service_id}/details`;
+      const response = await fetch(url, options);
+      const data = await response.json();
+      return data;
+
+      // const response = await this.wsClient.get(`service/${this.service_id}/details`);
+      // return response.data;
     } catch (error) {
       console.error(error);
       throw error;
