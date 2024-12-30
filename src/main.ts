@@ -1,7 +1,7 @@
 import './assets/main.css';
 
 import { createApp } from 'vue';
-import { createI18n } from 'vue-i18n';
+import { createI18n, type I18nOptions } from 'vue-i18n';
 
 import Aura from '@primevue/themes/aura';
 import PrimeVue from 'primevue/config';
@@ -18,7 +18,7 @@ import 'primeicons/primeicons.css';
 import App from './App.vue';
 import router from './router';
 
-const dateTimeFormats = () => ({
+const dateTimeFormats: I18nOptions["datetimeFormats"] = {
   'en-US': {
     short: {
       year: 'numeric',
@@ -47,13 +47,13 @@ const dateTimeFormats = () => ({
       minute: 'numeric',
     },
   },
-});
+};
 const i18n = createI18n({
   // something vue-i18n options here ...
   locale: 'en-US',
   fallbackLocale: 'en-US',
   availableLocales: ['fr-FR', 'en-US'],
-  datetimeFormats: dateTimeFormats(),
+  datetimeFormats: dateTimeFormats,
 });
 
 const _app = createApp(App)

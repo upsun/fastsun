@@ -16,7 +16,7 @@ const toast = useToast();
 
 // TODO get current version HERE !
 const vcl_version = ref(-1);
-const project_detail = ref<ProjectEntity>();
+const project_detail = ref<ProjectEntity>({} as ProjectEntity);
 
 function refresh() {
   console.log('Refresh Project Detail!');

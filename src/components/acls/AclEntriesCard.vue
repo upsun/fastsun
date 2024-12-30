@@ -9,6 +9,7 @@ import InputText from 'primevue/inputtext';
 import type AclEntity from './acl.interface';
 import type AclItemEntity from './acl.interface';
 
+
 // Init
 const emit = defineEmits(['update:visible']);
 const toast = useToast();
@@ -135,14 +136,7 @@ function deleteIp() {
         editMode="row"
         v-model:editingRows="editingRows"
         @row-edit-save="onRowEditSave"
-        :pt="{
-          table: { style: 'min-width: 50rem' },
-          column: {
-            bodycell: ({ state }) => ({
-              style: state['d_editing'] && 'padding-top: 0.75rem; padding-bottom: 0.75rem',
-            }),
-          },
-        }"
+
       >
         <template #empty> No IPs defined. </template>
         <template #loading> Loading IPs data. Please wait...</template>

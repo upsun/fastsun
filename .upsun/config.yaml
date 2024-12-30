@@ -1,0 +1,40 @@
+applications:
+  fastlysun:
+    source:
+      root: "/"
+    type: "nodejs:22"
+    web:
+      locations:
+        "/":
+          root: 'dist'
+          index:
+            - "manifest.json"
+          headers:
+            Access-Control-Allow-Origin: "*"
+          expires: 300
+          scripts: true
+          allow: false
+          rules:
+            \.(json|css|js|gif|jpe?g|png|ttf|eot|woff2?|otf|html|ico|svg|map)$:
+              allow: true
+
+    build:
+      flavor: none
+
+    hooks:
+      build: |
+        set -eux
+        npm i
+        npm run build
+      deploy: |
+        set -eux
+        # echo 'Put your deploy command here'
+
+routes:
+  "https://{default}/":
+    type: upstream
+    upstream: "fastlysun:http"
+
+  "https://www.{default}":
+    type: redirect
+    to: "https://{default}/"

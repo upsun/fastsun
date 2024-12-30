@@ -21,7 +21,7 @@ const props = defineProps({
 
 // Data
 const versions = ref<VclEntity[]>([]);
-const vcl_selected = ref<VclEntity>();
+const vcl_selected = ref<VclEntity>({} as VclEntity);
 const displayVclDialog = ref<boolean>(false);
 
 function refresh() {

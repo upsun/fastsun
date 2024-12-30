@@ -26,7 +26,7 @@ const props = defineProps({
 
 // Data
 const domains = ref<DomainEntity[]>([]);
-const domain_selected = ref<DomainEntity>();
+const domain_selected = ref<DomainEntity>({} as DomainEntity);
 const deleteDomainDialog = ref<boolean>(false);
 const editDomainDialog = ref<boolean>(false);
 
