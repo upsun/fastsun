@@ -1,4 +1,5 @@
 import axios, { type AxiosInstance } from 'axios';
+import * as Fastly from "fastly";
 
 //axios.defaults.headers.common['Access-Control-Allow-Origin'] = 'http://localhost:8080';
 // axios.defaults.withCredentials = true
@@ -9,10 +10,12 @@ export default abstract class APIService {
   protected service_id: string;
   protected headers: Object;
   protected baseUrl: string;
+  protected requestMode: RequestMode = 'cors';
 
   constructor(service_id: string, token: string) {
     this.service_id = service_id;
 
+    // Common (fetch)
     this.baseUrl = 'https://api.fastly.com/';
     this.headers = {
       'Fastly-Key': token,
@@ -23,10 +26,15 @@ export default abstract class APIService {
       //'Access-Control-Allow-Methods': 'GET'
     };
 
+
+    // Axios
     this.wsClient = axios.create({
       baseURL: this.baseUrl,
       headers: this.headers,
     });
+
+    // Fastly Client
+    Fastly.ApiClient.instance.authenticate(token);
   }
 
   get() {
