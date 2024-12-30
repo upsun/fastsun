@@ -1,10 +1,7 @@
-import mitt from "mitt";
+import mitt from 'mitt';
 
 export const enum EventType {
-  LOG_REFRESH = "log.refresh",
+  LOG_REFRESH = 'log.refresh',
 }
 
 export const eventBus = mitt();
-
-
-

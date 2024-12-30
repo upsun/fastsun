@@ -29,9 +29,9 @@ const chartData = {
       data: [],
       fill: true,
       borderColor: '#42A5F5',
-      tension: .01
-    }
-  ]
+      tension: 0.01,
+    },
+  ],
 };
 const chartOptions = ref({
   animation: false,
@@ -40,8 +40,8 @@ const chartOptions = ref({
       min: 0,
       suggestedMax: 2,
       ticks: {
-        stepSize: 1
-      }
+        stepSize: 1,
+      },
     },
     x: {
       type: 'time',
@@ -52,11 +52,11 @@ const chartOptions = ref({
         unit: 'second',
         unitStepSize: 1,
         displayFormats: {
-          second: 'hh:mm:ss'
-        }
-      }
-    }
-  }
+          second: 'hh:mm:ss',
+        },
+      },
+    },
+  },
 });
 
 onMounted(() => {
@@ -76,35 +76,40 @@ function getNextStat() {
   lock.value = true;
   const projectService = new ProjectAPIService(props.service_id!, FASTLY_API_TOKEN);
 
-  projectService.getStat()
-  .then(result => {
-    if (result.Data.length > 0) {
-      const chart = chartInstance.value.chart;
-      if (chart.data.labels.length >= sampleCount) {
-        chart.data.labels = chart.data.labels.slice(1);
-        chart.data.datasets[0].data = chart.data.datasets[0].data.slice(1);
+  projectService
+    .getStat()
+    .then((result) => {
+      if (result.Data.length > 0) {
+        const chart = chartInstance.value.chart;
+        if (chart.data.labels.length >= sampleCount) {
+          chart.data.labels = chart.data.labels.slice(1);
+          chart.data.datasets[0].data = chart.data.datasets[0].data.slice(1);
+        }
+        chart.data.labels.push(new Date().valueOf());
+        chart.data.datasets[0].data.push(result.Data[0].aggregated.requests);
+        chart.update();
       }
-      chart.data.labels.push(new Date().valueOf());
-      chart.data.datasets[0].data.push(result.Data[0].aggregated.requests)
-      chart.update()
-    }
-  })
-  .catch(error => {
-    toast.add({ severity: 'error', summary: 'Error', detail: error, life: 3000 });
-  })
-  .finally(() => {
-    lock.value = false;
-  });
-};
-
-
+    })
+    .catch((error) => {
+      toast.add({ severity: 'error', summary: 'Error', detail: error, life: 3000 });
+    })
+    .finally(() => {
+      lock.value = false;
+    });
+}
 </script>
 
 <template>
   <Card>
     <template #title>Real-time statistic</template>
     <template #content>
-      <Chart type="line" ref="chartInstance" :data="chartData" :options="chartOptions" class="h-[30rem]" />
+      <Chart
+        type="line"
+        ref="chartInstance"
+        :data="chartData"
+        :options="chartOptions"
+        class="h-[30rem]"
+      />
     </template>
   </Card>
 </template>

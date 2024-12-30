@@ -3,13 +3,12 @@ import { inject, onMounted, onBeforeUnmount, ref, toRaw, watchEffect } from 'vue
 import { useToast } from 'primevue/usetoast';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
-import Button from "primevue/button"
+import Button from 'primevue/button';
 import ProjectAPIService from './project.service';
-import { eventBus, EventType } from "@/utils/eventBus";
+import { eventBus, EventType } from '@/utils/eventBus';
 
 import type ActivityEntity from './project.interface';
 import type UserEntity from './project.interface';
-
 
 // Init
 const FASTLY_API_TOKEN = inject('FASTLY_API_TOKEN') as string;
@@ -23,7 +22,7 @@ const props = defineProps({
 
 onMounted(() => {
   eventBus.on(EventType.LOG_REFRESH, refresh);
-})
+});
 
 onBeforeUnmount(() => {
   eventBus.off(EventType.LOG_REFRESH);
@@ -35,42 +34,42 @@ const cacheUser = new Map<string, string>();
 
 // Or use Computed()
 function refresh() {
-  console.log("Refresh Activities History!");
-  const projectService = new ProjectAPIService (props.service_id!, FASTLY_API_TOKEN);
+  console.log('Refresh Activities History!');
+  const projectService = new ProjectAPIService(props.service_id!, FASTLY_API_TOKEN);
 
-  projectService.getActivities()
-  .then(result => {
-    activities.value = result;
+  projectService
+    .getActivities()
+    .then((result) => {
+      activities.value = result;
 
-    if (import.meta.env.DEV) {
-      activities.value.forEach(activitie => {
-        console.log(toRaw(activitie));
-      });
-    }
-
-    activities.value.forEach((activitie: ActivityEntity) => {
-      const user_id = activitie.attributes.user_id;
-
-      if (!cacheUser.has(user_id)){
-
-        projectService.getUser(user_id)
-        .then(result => {
-          cacheUser.set(user_id, result.name);
-          activitie.attributes.username = result.name;
-        })
-        .catch(error => {
-          toast.add({ severity: 'error', summary: 'Error', detail: error, life: 3000 });
+      if (import.meta.env.DEV) {
+        activities.value.forEach((activitie) => {
+          console.log(toRaw(activitie));
         });
-
-      } else {
-        activitie.attributes.username = cacheUser.get(user_id) as string;
       }
+
+      activities.value.forEach((activitie: ActivityEntity) => {
+        const user_id = activitie.attributes.user_id;
+
+        if (!cacheUser.has(user_id)) {
+          projectService
+            .getUser(user_id)
+            .then((result) => {
+              cacheUser.set(user_id, result.name);
+              activitie.attributes.username = result.name;
+            })
+            .catch((error) => {
+              toast.add({ severity: 'error', summary: 'Error', detail: error, life: 3000 });
+            });
+        } else {
+          activitie.attributes.username = cacheUser.get(user_id) as string;
+        }
+      });
+    })
+    .catch((error) => {
+      toast.add({ severity: 'error', summary: 'Error', detail: error, life: 3000 });
     });
-  })
-  .catch(error => {
-    toast.add({ severity: 'error', summary: 'Error', detail: error, life: 3000 });
-  });
-};
+}
 watchEffect(refresh);
 
 // Events
@@ -80,15 +79,22 @@ watchEffect(refresh);
   <Card>
     <template #title v-if="false">Manage Version</template>
     <template #content>
-      <DataTable :value="activities" dataKey="id"
-            resizableColumns columnResizeMode="fit"
-            sortField="number" :sortOrder="-1" :defaultSortOrder="-1"
-            :paginator="true" :rows="10" :rowsPerPageOptions="[5, 10, 20, 50]"
-            paginatorTemplate="RowsPerPageDropdown FirstPageLink PrevPageLink CurrentPageReport NextPageLink LastPageLink"
-            currentPageReportTemplate="{first} to {last} of {totalRecords}"
-            >
+      <DataTable
+        :value="activities"
+        dataKey="id"
+        resizableColumns
+        columnResizeMode="fit"
+        sortField="number"
+        :sortOrder="-1"
+        :defaultSortOrder="-1"
+        :paginator="true"
+        :rows="10"
+        :rowsPerPageOptions="[5, 10, 20, 50]"
+        paginatorTemplate="RowsPerPageDropdown FirstPageLink PrevPageLink CurrentPageReport NextPageLink LastPageLink"
+        currentPageReportTemplate="{first} to {last} of {totalRecords}"
+      >
         <template #paginatorstart>
-          <Button type="button" icon="pi pi-refresh" text @click="refresh"/>
+          <Button type="button" icon="pi pi-refresh" text @click="refresh" />
         </template>
         <template #paginatorend>
           <Button type="button" v-if="false" icon="pi pi-download" text />
@@ -111,4 +117,3 @@ watchEffect(refresh);
     </template>
   </Card>
 </template>
-

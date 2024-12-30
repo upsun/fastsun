@@ -4,12 +4,12 @@ import { useToast } from 'primevue/usetoast';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import Dialog from 'primevue/dialog';
-import Button from "primevue/button";
+import Button from 'primevue/button';
 
 import AclEntriesCard from './AclEntriesCard.vue';
 import AclAPIService from './acl.service';
 import type AclEntity from './acl.interface';
-
+import type AclItemEntity from './acl.interface';
 
 // Init
 const FASTLY_API_TOKEN = inject('FASTLY_API_TOKEN') as string;
@@ -32,39 +32,43 @@ const deleteAclDialog = ref<boolean>(false);
 const editAclDialog = ref<boolean>(false);
 
 function refresh() {
-  console.log("Refresh ACL!");
+  console.log('Refresh ACL!');
   const aclService = new AclAPIService(props.service_id!, FASTLY_API_TOKEN);
 
-  aclService.getACL(props.vcl_version!)
-  .then(result => {
-    acls.value = result;
-    cleanSelected();
+  aclService
+    .getACL(props.vcl_version!)
+    .then((result) => {
+      acls.value = result;
+      cleanSelected();
 
-    if (import.meta.env.DEV) { //DEBUG
-      acls.value.forEach(acl => {
-        console.log(toRaw(acl));
-      })
-    }
+      if (import.meta.env.DEV) {
+        //DEBUG
+        acls.value.forEach((acl) => {
+          console.log(toRaw(acl));
+        });
+      }
 
-    acls.value.forEach( (acl: AclEntity) => {
-      aclService.getACLEntry(acl.id)
-      .then(result => {
-        acl.entries = result;
-      })
-      .catch(error => {
-        toast.add({ severity: 'error', summary: 'Error', detail: error, life: 3000 });
+      acls.value.forEach((acl: AclEntity) => {
+        aclService
+          .getACLEntry(acl.id)
+          .then((result) => {
+            acl.entries = result;
+          })
+          .catch((error) => {
+            toast.add({ severity: 'error', summary: 'Error', detail: error, life: 3000 });
+          });
       });
+    })
+    .catch((error) => {
+      toast.add({ severity: 'error', summary: 'Error', detail: error, life: 3000 });
     });
-  })
-  .catch(error => {
-    toast.add({ severity: 'error', summary: 'Error', detail: error, life: 3000 });
-  });
-};
+}
 watchEffect(refresh);
 
 // Events
 function cleanSelected() {
   acl_selected.value = {} as AclEntity;
+  acl_selected.value.entries = [] as AclItemEntity[];
 }
 
 function setSelected(acl: AclEntity) {
@@ -73,12 +77,12 @@ function setSelected(acl: AclEntity) {
 
 function openAclEditModal() {
   editAclDialog.value = true;
-};
+}
 
 function closeAclEditModal(updated: boolean) {
   editAclDialog.value = false;
   cleanSelected();
-};
+}
 
 function openAclDeleteModal() {
   deleteAclDialog.value = true;
@@ -90,22 +94,22 @@ function closeAclDeleteModal() {
 }
 
 function addAcl() {
-  console.log("Add ACL!");
+  console.log('Add ACL!');
 
   cleanSelected();
   openAclEditModal();
 }
 
 function editAcl(acl: AclEntity) {
-  console.log("Edit ACL: " + acl.id);
+  console.log('Edit ACL: ' + acl.id);
 
-  const clone = JSON.parse(JSON.stringify(acl))
+  const clone = JSON.parse(JSON.stringify(acl));
   setSelected(clone);
   openAclEditModal();
 }
 
 function confirmDeleteAcl(acl: AclEntity) {
-  console.log("Delete ACL: (check): " + acl.id);
+  console.log('Delete ACL: (check): ' + acl.id);
 
   setSelected(acl);
   openAclDeleteModal();
@@ -113,7 +117,7 @@ function confirmDeleteAcl(acl: AclEntity) {
 
 function deleteAcl() {
   if (acl_selected.value) {
-    console.log("Delete ACL (make): " + acl_selected.value.id);
+    console.log('Delete ACL (make): ' + acl_selected.value.id);
 
     //TODO call remove API
     acls.value = acls.value.filter((val: AclEntity) => val.id !== acl_selected.value!.id);
@@ -128,25 +132,38 @@ function deleteAcl() {
   <Card>
     <template #title v-if="false">Acces Control List</template>
     <template #content>
-      <DataTable :value="acls" dataKey="id"
-            stripedRows
-            resizableColumns columnResizeMode="fit"
-            sortField="updated_at" :sortOrder="-1"
-            :paginator="true" :rows="5" :rowsPerPageOptions="[5, 10, 20, 50]"
-            paginatorTemplate="RowsPerPageDropdown FirstPageLink PrevPageLink CurrentPageReport NextPageLink LastPageLink"
-            currentPageReportTemplate="{first} to {last} of {totalRecords}"
-            >
+      <DataTable
+        :value="acls"
+        dataKey="id"
+        stripedRows
+        resizableColumns
+        columnResizeMode="fit"
+        sortField="updated_at"
+        :sortOrder="-1"
+        :paginator="true"
+        :rows="5"
+        :rowsPerPageOptions="[5, 10, 20, 50]"
+        paginatorTemplate="RowsPerPageDropdown FirstPageLink PrevPageLink CurrentPageReport NextPageLink LastPageLink"
+        currentPageReportTemplate="{first} to {last} of {totalRecords}"
+      >
         <template #paginatorstart>
-            <Button type="button" icon="pi pi-refresh" text  @click="refresh"/>
+          <Button type="button" icon="pi pi-refresh" text @click="refresh" />
         </template>
         <template #paginatorend>
-            <Button type="button" v-if="false" icon="pi pi-download" text />
+          <Button type="button" v-if="false" icon="pi pi-download" text />
         </template>
         <template #header>
           <div class="flex flex-wrap gap-2 items-center justify-between">
-                <h4 class="m-0" style="display: inline-flex;">Manage ACL</h4>
-                <Button label="Add" icon="pi pi-plus" size="small" class="mr-2" style="margin-left: auto;" @click="addAcl()" />
-            </div>
+            <h4 class="m-0" style="display: inline-flex">Manage ACL</h4>
+            <Button
+              label="Add"
+              icon="pi pi-plus"
+              size="small"
+              class="mr-2"
+              style="margin-left: auto"
+              @click="addAcl()"
+            />
+          </div>
         </template>
         <template #empty> No ACL found. </template>
         <template #loading> Loading ACLs data. Please wait. </template>
@@ -165,27 +182,50 @@ function deleteAcl() {
           </template>
         </Column>
         <Column :exportable="false" style="min-width: 8rem" header="Actions">
-            <template #body="slotProps">
-                <Button icon="pi pi-pencil" outlined rounded class="mr-2" @click="editAcl(slotProps.data)" />
-                <Button icon="pi pi-trash" outlined rounded severity="danger" @click="confirmDeleteAcl(slotProps.data)" />
-            </template>
+          <template #body="slotProps">
+            <Button
+              icon="pi pi-pencil"
+              outlined
+              rounded
+              class="mr-2"
+              @click="editAcl(slotProps.data)"
+            />
+            <Button
+              icon="pi pi-trash"
+              outlined
+              rounded
+              severity="danger"
+              @click="confirmDeleteAcl(slotProps.data)"
+            />
+          </template>
         </Column>
       </DataTable>
     </template>
   </Card>
 
-  <AclEntriesCard v-if="editAclDialog" :acl_data="acl_selected" :acl_state_dialog="editAclDialog" @update:visible="closeAclEditModal" />
+  <AclEntriesCard
+    v-if="editAclDialog"
+    :acl_data="acl_selected"
+    :acl_state_dialog="editAclDialog"
+    @update:visible="closeAclEditModal"
+  />
 
-  <Dialog v-model:visible="deleteAclDialog" :style="{ width: '450px' }" header="Confirm" :modal="true">
+  <Dialog
+    v-model:visible="deleteAclDialog"
+    :style="{ width: '450px' }"
+    header="Confirm"
+    :modal="true"
+  >
     <div class="flex items-center gap-4">
-        <i class="pi pi-exclamation-triangle !text-3xl" />
-        <span v-if="acl_selected"
-            >Are you sure you want to delete <b>{{ acl_selected.name }}</b>?</span
-        >
+      <i class="pi pi-exclamation-triangle !text-3xl" />
+      <span v-if="acl_selected"
+        >Are you sure you want to delete <b>{{ acl_selected.name }}</b
+        >?</span
+      >
     </div>
     <template #footer>
-        <Button label="No" icon="pi pi-times" text @click="deleteAclDialog = false" />
-        <Button label="Yes" icon="pi pi-check" @click="deleteAcl" />
+      <Button label="No" icon="pi pi-times" text @click="deleteAclDialog = false" />
+      <Button label="Yes" icon="pi pi-check" @click="deleteAcl" />
     </template>
   </Dialog>
 </template>

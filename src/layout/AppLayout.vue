@@ -8,15 +8,15 @@ import AppTopbar from './AppTopbar.vue';
 
 <template>
   <div class="layout-wrapper">
-      <!-- <AppTopbar /> -->
-      <AppSidebar />
-      <div class="layout-main-container">
-          <div class="layout-main">
-              <router-view></router-view>
-          </div>
-          <AppFooter />
+    <!-- <AppTopbar /> -->
+    <AppSidebar />
+    <div class="layout-main-container">
+      <div class="layout-main">
+        <router-view></router-view>
       </div>
-      <div class="layout-mask animate-fadein"></div>
+      <AppFooter />
+    </div>
+    <div class="layout-mask animate-fadein"></div>
   </div>
   <Toast />
 </template>

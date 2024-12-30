@@ -10,6 +10,11 @@ export default interface ActivityEntity extends Identifiable {
 }
 
 export default interface UserEntity extends Identifiable {
-  id: string;
   username: string;
+}
+
+export default interface ProjectEntity extends Identifiable {
+  active_version: {
+    number: number;
+  };
 }

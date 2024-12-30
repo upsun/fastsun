@@ -11,11 +11,10 @@ body {
   display: flex;
   /* place-items: center; */
   background-color: rgb(242, 243, 244);
-
 }
 
 main {
-    /* display: flex;
+  /* display: flex;
     flex-wrap: wrap;
     justify-content: space-between; */
 }

@@ -1,8 +1,8 @@
-import axios, { type AxiosInstance } from "axios";
+import axios, { type AxiosInstance } from 'axios';
 
 export default abstract class APIService {
   protected wsClient: AxiosInstance;
-  protected service_id: string
+  protected service_id: string;
 
   constructor(service_id: string, token: string) {
     this.service_id = service_id;
@@ -10,8 +10,8 @@ export default abstract class APIService {
       baseURL: 'https://api.fastly.com/',
       headers: {
         'Fastly-Key': token,
-        'Accept': 'application/json'
-      }
+        Accept: 'application/json',
+      },
     });
-  };
+  }
 }
