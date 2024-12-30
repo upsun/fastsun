@@ -9,8 +9,8 @@ applications:
           root: 'dist'
           index:
             - "index.html"
-          headers:
-            Access-Control-Allow-Origin: "*"
+          # headers:
+          #   Access-Control-Allow-Origin: "*"
           #expires: 300
           scripts: true
           allow: false

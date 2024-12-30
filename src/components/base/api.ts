@@ -1,5 +1,9 @@
 import axios, { type AxiosInstance } from 'axios';
 
+// axios.defaults.headers.common['Access-Control-Allow-Origin'] = '*';
+// axios.defaults.withCredentials = true
+// axios.defaults.withXSRFToken = true;
+
 export default abstract class APIService {
   protected wsClient: AxiosInstance;
   protected service_id: string;
@@ -10,6 +14,7 @@ export default abstract class APIService {
       baseURL: 'https://api.fastly.com/',
       headers: {
         'Fastly-Key': token,
+        // 'Access-Control-Allow-Origin': '*',
         Accept: 'application/json',
       },
     });
