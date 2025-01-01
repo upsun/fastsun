@@ -25,7 +25,7 @@ applications:
       build: |
         set -eux
         npm i
-        npm run build
+        npm run build-only
         cp manifest.json dist/
       deploy: |
         set -eux
