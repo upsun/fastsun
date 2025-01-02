@@ -61,13 +61,13 @@ const chartOptions = ref({
 });
 
 onMounted(() => {
-  if (import.meta.env.DEV) {
+  // if (import.meta.env.DEV) {
     timer.value = setInterval(() => {
       if (!lock.value) {
         getNextStat();
       }
     }, 1000);
-  }
+  // }
 });
 
 // Clean up

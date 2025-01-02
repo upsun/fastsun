@@ -4,6 +4,8 @@ applications:
       root: "/"
     type: "nodejs:22"
     web:
+      commands:
+        start: "npx ts-node src/proxy.js"
       locations:
         "/":
           root: 'dist'
@@ -11,7 +13,7 @@ applications:
             - "index.html"
           headers:
             Access-Control-Allow-Origin: "*"
-          #expires: 300
+          expires: 300
           scripts: true
           allow: false
           rules:

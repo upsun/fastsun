@@ -7,12 +7,19 @@ import type ProjectEntity from './project.interface';
 
 export default class ProjectAPIService extends APIService {
   protected wsClientStat: AxiosInstance;
+  protected baseUrlRt: string;
 
   constructor(service_id: string, token: string) {
     super(service_id, token);
 
+    if (import.meta.env.DEV) {
+      this.baseUrlRt = 'https://rt.fastly.com/';  // Direct Access
+    } else {
+      this.baseUrlRt = 'rt/';  // Proxy Access
+    }
+
     this.wsClientStat = axios.create({
-      baseURL: 'https://rt.fastly.com/v1/channel/',
+      baseURL: this.baseUrlRt,
       headers: this.headers,
     });
   }
@@ -69,7 +76,7 @@ export default class ProjectAPIService extends APIService {
   async getStat() {
     try {
       const response = await this.wsClientStat.get(
-        `${this.service_id}/ts/${Math.floor(new Date().valueOf() / 1000)}`,
+        `v1/channel/${this.service_id}/ts/${Math.floor(new Date().valueOf() / 1000)}`,
       );
       return response.data;
     } catch (error) {
