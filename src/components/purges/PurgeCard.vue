@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { inject } from 'vue';
 import { Button } from 'primevue';
 import { useToast } from 'primevue/usetoast';
 import PurgeAPIService from './purge.service';

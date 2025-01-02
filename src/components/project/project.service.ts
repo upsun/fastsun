@@ -6,7 +6,7 @@ import type UserEntity from './project.interface';
 import type ProjectEntity from './project.interface';
 
 export default class ProjectAPIService extends APIService {
-  protected wsClientStat: AxiosInstance;
+  protected wsClientRt: AxiosInstance;
   protected baseUrlRt: string;
 
   constructor(service_id: string, token: string) {
@@ -18,7 +18,7 @@ export default class ProjectAPIService extends APIService {
       this.baseUrlRt = 'rt/';  // Proxy Access
     }
 
-    this.wsClientStat = axios.create({
+    this.wsClientRt = axios.create({
       baseURL: this.baseUrlRt,
       headers: this.headers,
     });
@@ -48,23 +48,22 @@ export default class ProjectAPIService extends APIService {
 
   async getProject(): Promise<ProjectEntity> {
     try {
-      // Fastly client
+      //// Fastly client
       // const apiInstance = new Fastly.ServiceApi();
       // const options = {
       //   service_id: this.service_id,
       // };
       // const response = await apiInstance.getServiceDetail(options);
-
       // return response
 
-      // Fetch
+      //// Fetch
       // const options = { method:'GET', mode:this.requestMode, headers:this.headers } as RequestInit;
       // const url = this.baseUrl + `service/${this.service_id}/details`;
       // const response = await fetch(url, options);
       // const data = await response.json();
       // return data;
 
-      // Axios
+      //// Axios
       const response = await this.wsClient.get(`service/${this.service_id}/details`);
       return response.data;
     } catch (error) {
@@ -75,7 +74,7 @@ export default class ProjectAPIService extends APIService {
 
   async getStat() {
     try {
-      const response = await this.wsClientStat.get(
+      const response = await this.wsClientRt.get(
         `v1/channel/${this.service_id}/ts/${Math.floor(new Date().valueOf() / 1000)}`,
       );
       return response.data;

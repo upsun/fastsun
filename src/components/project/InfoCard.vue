@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { inject, ref, watchEffect, type PropType } from 'vue';
+import { type PropType } from 'vue';
 import PurgesCard from '@/components/purges/PurgeCard.vue';
 import type ProjectEntity from '@/components/project/project.interface';
 

@@ -5,7 +5,7 @@ const PORT = process.env.PORT || 8888;
 const proxy = httpproxy.createProxyServer({});
 
 const server = http.createServer(function (req, res) {
-  if (/^\/api/.test(req.url)) {
+  if (req.url.startsWith("\/api")) {
     req.url = req.url.replace(/^\/api/, '');
     proxy.web(req, res, {
       target: 'https://api.fastly.com/',
@@ -14,7 +14,7 @@ const server = http.createServer(function (req, res) {
     });
   } else
 
-  if (/^\/rt/.test(req.url)) {
+  if (req.url.startsWith("\/rt")) {
     req.url = req.url.replace(/^\/rt/, "");
     proxy.web(req, res, {
       target: 'https://rt.fastly.com/',

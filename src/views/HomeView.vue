@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, inject, ref, toRaw, watchEffect } from 'vue';
+import { computed, ref, toRaw, watchEffect } from 'vue';
 import { useToast } from 'primevue/usetoast';
 import SetuCard from '@/components/SetupCard.vue';
 import AclsCard from '@/components/acls/AclCard.vue';

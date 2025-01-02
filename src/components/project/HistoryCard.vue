@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { inject, onMounted, onBeforeUnmount, ref, toRaw, watchEffect } from 'vue';
+import { onMounted, onBeforeUnmount, ref, toRaw, watchEffect } from 'vue';
 import { useToast } from 'primevue/usetoast';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';

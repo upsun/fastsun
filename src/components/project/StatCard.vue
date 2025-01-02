@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { inject, ref, onBeforeUnmount, onMounted } from 'vue';
+import { ref, onBeforeUnmount, onMounted } from 'vue';
 import { useToast } from 'primevue/usetoast';
 import Chart from 'primevue/chart';
 import ProjectAPIService from './project.service';

@@ -1,6 +1,6 @@
 {
-  "name": "fastlysun",
-  "version": "0.0.0",
+  "name": "fastsun",
+  "version": "0.1.0",
   "private": true,
   "type": "module",
   "scripts": {

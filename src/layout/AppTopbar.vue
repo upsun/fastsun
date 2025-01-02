@@ -23,7 +23,7 @@ function toggleMenu() {}
         <i class="pi pi-bars"></i>
       </button>
       <router-link to="/" class="layout-topbar-logo">
-        <span>FastlySun</span>
+        <span>FastSun</span>
       </router-link>
     </header>
 

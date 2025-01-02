@@ -30,7 +30,7 @@ export default class UserCache {
 
   setFastlyToken(fastly_token: string) {
     if (fastly_token) {
-      // Encrypt value !!
+      //TODO Encrypt value !!
       localStorage.setItem(KEY_FASTLY_TK, fastly_token);
     }
   }
@@ -40,7 +40,7 @@ export default class UserCache {
   }
 
   getFastlyToken(): string {
-    // Decrypt value !!
+    //TODO Decrypt value !!
     return localStorage.getItem(KEY_FASTLY_TK) || '';
   }
 }

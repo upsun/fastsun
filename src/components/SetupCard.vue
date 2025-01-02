@@ -1,7 +1,5 @@
 <script setup lang="ts">
-import { inject, ref, toRaw, watchEffect } from 'vue';
-import { useToast } from 'primevue/usetoast';
-import Dialog from 'primevue/dialog';
+import { ref } from 'vue';
 import InputText from 'primevue/inputtext';
 import ApiCache from '@/stores/localStorage';
 
@@ -37,39 +35,31 @@ function saveId() {
   <Card>
     <template #title v-if="false">Domain Information</template>
     <template #content>
-      <!-- <Dialog
-        v-bind:visible="domain_state_dialog"
-        @update:visible="closeModal"
-        :style="{ width: '450px' }"
-        :header="headerTitle"
-        :modal="true"
-      > -->
-        <div>
-          <label for="fastly_id" class="block font-bold mb-3">Fastly Service ID</label>
-          <InputText
-            id="fastly_id"
-            v-model.trim="fastly_id"
-            required="true"
-            autofocus
-            :invalid="submitted && !fastly_id"
-            fluid
-          />
-          <small v-if="submitted && !fastly_id" class="text-red-500">Fastly service ID is required.</small>
-        </div><br/>
+      <div>
+        <label for="fastly_id" class="block font-bold mb-3">Fastly Service ID</label>
+        <InputText
+          id="fastly_id"
+          v-model.trim="fastly_id"
+          required="true"
+          autofocus
+          :invalid="submitted && !fastly_id"
+          fluid
+        />
+        <small v-if="submitted && !fastly_id" class="text-red-500">Fastly service ID is required.</small>
+      </div><br/>
 
-        <div>
-          <label for="fastly_token" class="block font-bold mb-3">Fastly Service Token</label>
-          <InputText
-            id="fastly_token"
-            v-model.trim="fastly_token"
-            required="true"
-            autofocus
-            :invalid="submitted && !fastly_token"
-            fluid
-          />
-          <small v-if="submitted && !fastly_token" class="text-red-500">Fastly service Token is required.</small>
-        </div><br />
-      <!-- </Dialog> -->
+      <div>
+        <label for="fastly_token" class="block font-bold mb-3">Fastly Service Token</label>
+        <InputText
+          id="fastly_token"
+          v-model.trim="fastly_token"
+          required="true"
+          autofocus
+          :invalid="submitted && !fastly_token"
+          fluid
+        />
+        <small v-if="submitted && !fastly_token" class="text-red-500">Fastly service Token is required.</small>
+      </div><br />
     </template>
     <template #footer>
       <Button label="Save" icon="pi pi-check" @click="saveId" />

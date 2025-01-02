@@ -82,7 +82,7 @@ function addIp() {
   });
 
   if (!finded) {
-    const newRow = { id: idCounter.value--, ip: '0.0.0.0', comment: 'Add by FastlySun' } as never;
+    const newRow = { id: idCounter.value--, ip: '0.0.0.0', comment: 'Add by FastSun' } as never;
     entries.value.unshift(newRow);
     editingRows.value = [...editingRows.value, newRow];
   }
