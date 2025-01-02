@@ -1,5 +1,5 @@
 import axios, { type AxiosInstance } from 'axios';
-import * as Fastly from "fastly";
+// import * as Fastly from "fastly";
 
 //axios.defaults.headers.common['Access-Control-Allow-Origin'] = 'http://localhost:8080';
 // axios.defaults.withCredentials = true
@@ -20,7 +20,7 @@ export default abstract class APIService {
     this.headers = {
       'Fastly-Key': token,
       'Accept': 'application/json',
-      // 'Content-Type': 'application/json;charset=UTF-8',
+      'Content-Type': 'application/json;charset=UTF-8',
       //'Access-Control-Allow-Origin': '*',
       //'Access-Control-Allow-Origin': 'http://localhost:8080/',
       //'Access-Control-Allow-Methods': 'GET'
@@ -33,8 +33,8 @@ export default abstract class APIService {
       headers: this.headers,
     });
 
-    // Fastly Client
-    Fastly.ApiClient.instance.authenticate(token);
+    // // Fastly Client
+    // Fastly.ApiClient.instance.authenticate(token);
   }
 
   get() {

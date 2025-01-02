@@ -4,9 +4,10 @@ import { Button } from 'primevue';
 import { useToast } from 'primevue/usetoast';
 import PurgeAPIService from './purge.service';
 import { eventBus, EventType } from '@/utils/eventBus';
+import ApiCache from '@/stores/localStorage';
 
 // Init
-const FASTLY_API_TOKEN = inject('FASTLY_API_TOKEN') as string;
+const service_token = (new ApiCache()).getFastlyToken() || '';
 const toast = useToast();
 const props = defineProps({
   service_id: {
@@ -18,7 +19,7 @@ const props = defineProps({
 // Events
 function purgeAll() {
   console.log('Purge All!');
-  const purgeService = new PurgeAPIService(props.service_id!, FASTLY_API_TOKEN);
+  const purgeService = new PurgeAPIService(props.service_id!, service_token);
 
   purgeService
     .purgeAll()
@@ -33,7 +34,7 @@ function purgeAll() {
 
 function purgeUrl(url: string) {
   console.log('Purge URL : ' + url);
-  const purgeService = new PurgeAPIService(props.service_id!, FASTLY_API_TOKEN);
+  const purgeService = new PurgeAPIService(props.service_id!, service_token);
 
   purgeService
     .purgeUrl(url)

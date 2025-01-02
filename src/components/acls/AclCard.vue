@@ -10,9 +10,10 @@ import AclEntriesCard from './AclEntriesCard.vue';
 import AclAPIService from './acl.service';
 import type AclEntity from './acl.interface';
 import type AclItemEntity from './acl.interface';
+import ApiCache from '@/stores/localStorage';
 
 // Init
-const FASTLY_API_TOKEN = inject('FASTLY_API_TOKEN') as string;
+const service_token = (new ApiCache()).getFastlyToken() || '';
 const toast = useToast();
 const props = defineProps({
   service_id: {
@@ -33,7 +34,7 @@ const editAclDialog = ref<boolean>(false);
 
 function refresh() {
   console.log('Refresh ACL!');
-  const aclService = new AclAPIService(props.service_id!, FASTLY_API_TOKEN);
+  const aclService = new AclAPIService(props.service_id!, service_token);
 
   aclService
     .getACL(props.vcl_version!)

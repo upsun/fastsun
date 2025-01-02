@@ -4,10 +4,11 @@ import { useToast } from 'primevue/usetoast';
 import Chart from 'primevue/chart';
 import ProjectAPIService from './project.service';
 import 'chartjs-adapter-date-fns';
+import ApiCache from '@/stores/localStorage';
 
 // Init
+const service_token = (new ApiCache()).getFastlyToken() || '';
 const sampleCount = 20;
-const FASTLY_API_TOKEN = inject('FASTLY_API_TOKEN') as string;
 const toast = useToast();
 const props = defineProps({
   service_id: {
@@ -76,7 +77,7 @@ onBeforeUnmount(() => {
 
 function getNextStat() {
   lock.value = true;
-  const projectService = new ProjectAPIService(props.service_id!, FASTLY_API_TOKEN);
+  const projectService = new ProjectAPIService(props.service_id!, service_token);
 
   projectService
     .getStat()

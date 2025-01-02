@@ -9,9 +9,10 @@ import { eventBus, EventType } from '@/utils/eventBus';
 
 import type ActivityEntity from './project.interface';
 import UserCache from '@/stores/localStorage';
+import ApiCache from '@/stores/localStorage';
 
 // Init
-const FASTLY_API_TOKEN = inject('FASTLY_API_TOKEN') as string;
+const service_token = (new ApiCache()).getFastlyToken() || '';
 const toast = useToast();
 const props = defineProps({
   service_id: {
@@ -35,7 +36,7 @@ const activities = ref<ActivityEntity[]>([]);
 // Or use Computed()
 function refresh() {
   console.log('Refresh Activities History!');
-  const projectService = new ProjectAPIService(props.service_id!, FASTLY_API_TOKEN);
+  const projectService = new ProjectAPIService(props.service_id!, service_token);
 
   projectService
     .getActivities()

@@ -69,6 +69,4 @@ const _app = createApp(App)
   .component('Card', Card)
   .component('Button', Button)
   // @see https://vuejs.org/guide/components/provide-inject
-  .provide('FASTLY_API_TOKEN', import.meta.env.VITE_FASTLY_API_TOKEN)
-  .provide('FASTLY_API_SERVICE', import.meta.env.VITE_FASTLY_API_SERVICE)
   .mount('#app');

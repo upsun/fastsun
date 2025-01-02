@@ -22,7 +22,6 @@
     "chart.js": "^4.4.7",
     "chartjs-adapter-date-fns": "^3.0.0",
     "date-fns": "^4.1.0",
-    "fastly": "^8.0.0",
     "mitt-vue": "^2.0.3",
     "primeicons": "^7.0.0",
     "primevue": "^4.2.5",

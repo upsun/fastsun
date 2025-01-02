@@ -1,6 +1,5 @@
 import APIService from '../base/api';
 import axios, { type AxiosInstance } from 'axios';
-import * as Fastly from "fastly";
 
 import type ActivityEntity from './project.interface';
 import type UserEntity from './project.interface';
@@ -43,13 +42,13 @@ export default class ProjectAPIService extends APIService {
   async getProject(): Promise<ProjectEntity> {
     try {
       // Fastly client
-      const apiInstance = new Fastly.ServiceApi();
-      const options = {
-        service_id: this.service_id,
-      };
-      const response = await apiInstance.getServiceDetail(options);
+      // const apiInstance = new Fastly.ServiceApi();
+      // const options = {
+      //   service_id: this.service_id,
+      // };
+      // const response = await apiInstance.getServiceDetail(options);
 
-      return response
+      // return response
 
       // Fetch
       // const options = { method:'GET', mode:this.requestMode, headers:this.headers } as RequestInit;
@@ -59,8 +58,8 @@ export default class ProjectAPIService extends APIService {
       // return data;
 
       // Axios
-      // const response = await this.wsClient.get(`service/${this.service_id}/details`);
-      // return response.data;
+      const response = await this.wsClient.get(`service/${this.service_id}/details`);
+      return response.data;
     } catch (error) {
       console.error(error);
       throw error;

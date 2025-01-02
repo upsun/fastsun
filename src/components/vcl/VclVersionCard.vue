@@ -8,9 +8,10 @@ import Button from 'primevue/button';
 import DisplayVclCard from './VclDisplayCard.vue';
 import VclAPIService from './vcl.service';
 import type VclEntity from './vcl.interface';
+import ApiCache from '@/stores/localStorage';
 
 // Init
-const FASTLY_API_TOKEN = inject('FASTLY_API_TOKEN') as string;
+const service_token = (new ApiCache()).getFastlyToken() || '';
 const toast = useToast();
 const props = defineProps({
   service_id: {
@@ -26,7 +27,7 @@ const displayVclDialog = ref<boolean>(false);
 
 function refresh() {
   console.log('Refresh Version History!');
-  const vclService = new VclAPIService(props.service_id!, FASTLY_API_TOKEN);
+  const vclService = new VclAPIService(props.service_id!, service_token);
 
   vclService
     .getVersions()
@@ -58,7 +59,7 @@ function closeVclDisplayModal() {
 function showVCL(data: VclEntity) {
   console.log('Display VCL!');
 
-  const vclService = new VclAPIService(props.service_id!, FASTLY_API_TOKEN);
+  const vclService = new VclAPIService(props.service_id!, service_token);
   vclService
     .getVCL(data.number)
     .then((result) => {

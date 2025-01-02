@@ -9,9 +9,10 @@ import Button from 'primevue/button';
 import DomainEntryCard from './DomainEntryCard.vue';
 import DomainAPIService from './domain.service';
 import type DomainEntity from './domain.interface';
+import ApiCache from '@/stores/localStorage';
 
 // Init
-const FASTLY_API_TOKEN = inject('FASTLY_API_TOKEN') as string;
+const service_token = (new ApiCache()).getFastlyToken() || '';
 const toast = useToast();
 const props = defineProps({
   service_id: {
@@ -32,7 +33,7 @@ const editDomainDialog = ref<boolean>(false);
 
 function refresh() {
   console.log('Refresh Domain!');
-  const projectService = new DomainAPIService(props.service_id!, FASTLY_API_TOKEN);
+  const projectService = new DomainAPIService(props.service_id!, service_token);
 
   projectService
     .getDomains(props.vcl_version!)
