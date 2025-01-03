@@ -1,5 +1,8 @@
 import axios, { type AxiosInstance } from 'axios';
 
+/**
+ * API wrapper to call CDN (Fastly).
+ */
 export default abstract class APIService {
   protected wsClient: AxiosInstance;
   protected service_id: string;
@@ -9,11 +12,10 @@ export default abstract class APIService {
   constructor(service_id: string, token: string) {
     this.service_id = service_id;
 
-    // Common (fetch)
-    if (import.meta.env.DEV) {
-      this.baseUrl = 'https://api.fastly.com/';  // Direct Access
+    if (import.meta.env.VITE_PROXY_USE == 'true') {
+      this.baseUrl = 'api/';                    // Proxy Access
     } else {
-      this.baseUrl = 'api/';  // Proxy Access
+      this.baseUrl = 'https://api.fastly.com/'; // Direct Access
     }
 
     this.headers = {

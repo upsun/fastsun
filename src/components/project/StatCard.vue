@@ -4,10 +4,11 @@ import { useToast } from 'primevue/usetoast';
 import Chart from 'primevue/chart';
 import ProjectAPIService from './project.service';
 import 'chartjs-adapter-date-fns';
-import ApiCache from '@/stores/localStorage';
+import LocalStore from '@/stores/localStorage';
 
 // Init
-const service_token = (new ApiCache()).getFastlyToken() || '';
+const localStore = new LocalStore()
+const service_token = localStore.getFastlyToken() || '';
 const sampleCount = 20;
 const toast = useToast();
 const props = defineProps({
@@ -61,13 +62,13 @@ const chartOptions = ref({
 });
 
 onMounted(() => {
-  // if (import.meta.env.DEV) {
+  if (localStore.isRtApiEnable()) {
     timer.value = setInterval(() => {
       if (!lock.value) {
         getNextStat();
       }
     }, 1000);
-  // }
+  }
 });
 
 // Clean up

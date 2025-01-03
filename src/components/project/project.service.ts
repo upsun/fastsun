@@ -12,10 +12,10 @@ export default class ProjectAPIService extends APIService {
   constructor(service_id: string, token: string) {
     super(service_id, token);
 
-    if (import.meta.env.DEV) {
-      this.baseUrlRt = 'https://rt.fastly.com/';  // Direct Access
+    if (import.meta.env.VITE_PROXY_USE == 'true') {
+      this.baseUrlRt = 'rt/';                     // Proxy Access
     } else {
-      this.baseUrlRt = 'rt/';  // Proxy Access
+      this.baseUrlRt = 'https://rt.fastly.com/';  // Direct Access
     }
 
     this.wsClientRt = axios.create({

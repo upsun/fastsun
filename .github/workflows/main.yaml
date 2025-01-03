@@ -18,5 +18,15 @@ jobs:
       - name: 📥 Install dependencies
         run: npm install
 
+      - name: 🏗️ Lint
+        run: |
+          npm run lint
+          npm run type-check
+
+      - name: 🏗️ Test
+        if: ${{ false }}
+        run: |
+          npm run test:unit
+
       - name: 🏗️ Build
         run: npm run build

@@ -27,6 +27,10 @@ main {
   flex-wrap: wrap;
 }
 
+.p-card {
+  margin-bottom: 1.5em;
+}
+
 /* a,
 .green {
   text-decoration: none;
