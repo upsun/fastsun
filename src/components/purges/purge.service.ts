@@ -17,7 +17,8 @@ export default class PurgeAPIService extends APIService {
 
   async purgeUrl(url: string): Promise<object> {
     try {
-      const response = await this.wsClient.post(`purge/${url}`);
+      const lightUrl = url.replace(/^https?:\/\//, '')
+      const response = await this.wsClient.post(`purge/${lightUrl}`);
       return response.data;
     } catch (error) {
       console.error(error);

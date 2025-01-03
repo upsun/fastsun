@@ -31,6 +31,10 @@ main {
   margin-bottom: 1.5em;
 }
 
+.p-button {
+  margin-right: 0.5em;
+}
+
 /* a,
 .green {
   text-decoration: none;

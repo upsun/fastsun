@@ -20,8 +20,8 @@ export default abstract class APIService {
 
     this.headers = {
       'Fastly-Key': token,
-      'Accept': 'application/json',
       'Content-Type': 'application/json;charset=UTF-8',
+      'Accept': 'application/json',
     };
 
     // Axios

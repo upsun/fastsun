@@ -24,6 +24,7 @@ function saveId() {
   submitted.value = true;
 
   if (fastly_id.value && fastly_token.value) {
+    console.log('Set ID & Token!');
     apiStorage.setFastlyId(fastly_id.value);
     apiStorage.setFastlyToken(fastly_token.value);
 

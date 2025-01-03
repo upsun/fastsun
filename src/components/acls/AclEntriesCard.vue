@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watchEffect, type PropType } from 'vue';
+import { computed, ref, toRaw, watchEffect, type PropType } from 'vue';
 import { useToast } from 'primevue/usetoast';
 import DataTable, { type DataTableRowEditSaveEvent } from 'primevue/datatable';
 import Column from 'primevue/column';
@@ -8,6 +8,8 @@ import InputText from 'primevue/inputtext';
 
 import type AclEntity from './acl.interface';
 import type AclItemEntity from './acl.interface';
+import AclAPIService from './acl.service';
+import LocalStore from '@/stores/localStorage';
 
 
 // Init
@@ -22,6 +24,12 @@ const props = defineProps({
     type: Boolean,
     resuired: true,
   },
+  is_admin: {
+    type: Boolean,
+    default() {
+      return true;
+    }
+  }
 });
 
 // Data
@@ -33,6 +41,8 @@ const deleteIpDialog = ref<boolean>(false);
 const editingRows = ref([]);
 const idCounter = ref<number>(-1);
 
+const localStore = new LocalStore();
+const service_token = localStore.getFastlyToken() || '';
 function refresh() {
   console.log('Load ACL entity!');
 
@@ -41,8 +51,7 @@ function refresh() {
     headerTitle.value = 'Add ACL';
   } else {
     headerTitle.value = 'Edit ACL';
-    //TODO if need a copy : const clone = JSON.parse(JSON.stringify(props.acl_data?.entries));
-    entries.value = props.acl_data.entries;
+    entries.value = JSON.parse(JSON.stringify(props.acl_data.entries));
   }
 }
 watchEffect(refresh);
@@ -55,24 +64,52 @@ function closeModal(updated = false) {
 function openIpDeleteModal() {
   deleteIpDialog.value = true;
 }
-
 function closeIpDeleteModal() {
   deleteIpDialog.value = false;
   ip_selected.value = {} as AclItemEntity;
 }
 
+function isEdited(oldData: AclItemEntity, newData: AclItemEntity): boolean {
+  return (
+    oldData.ip != newData.ip ||
+    oldData.subnet != newData.subnet ||
+    oldData.comment != newData.comment
+    );
+}
+
 function onRowEditSave(event: DataTableRowEditSaveEvent) {
-  const { newData, index } = event;
-  entries.value[index] = newData;
+  const { data, newData, index } = event;
+
+  if (isEdited(data, newData)) {
+    entries.value[index] = newData;
+
+    if (data.op == undefined || data.op == '') {
+      newData.op = 'update';
+    }
+  }
 }
 
 function saveACL() {
   //TODO Save by API
   // saveACL(acl
+  //if props.acl_data?.name != e
+
+  // Only item to update
+  const updated = entries.value.filter((entrie: AclItemEntity) => {
+    return entrie.op != undefined && entrie.op != '';
+  });
+
+  // Call API for entry https://www.fastly.com/documentation/reference/api/acls/acl-entry/#bulk-update-acl-entries
+  const aclApi = new AclAPIService(props.acl_data!.service_id, service_token);
+  aclApi.updateAclEntry(props.acl_data!.id, toRaw(updated)).then(() => {
+    closeModal(true);
+    toast.add({ severity: 'success', summary: 'Successful', detail: 'Acl Created', life: 3000 });
+  }).catch((error) => {
+    toast.add({ severity: 'error', summary: 'Error', detail: error, life: 3000 });
+  });
 
   // if (true) {
-  closeModal(true);
-  toast.add({ severity: 'success', summary: 'Successful', detail: 'Acl Created', life: 3000 });
+
   // }
 }
 
@@ -82,14 +119,14 @@ function addIp() {
   });
 
   if (!finded) {
-    const newRow = { id: idCounter.value--, ip: '0.0.0.0', comment: 'Add by FastSun' } as never;
+    const newRow = { id: idCounter.value--, ip: '8.8.8.8', subnet: '32', comment: 'Add by FastSun', op: 'create' } as never;
     entries.value.unshift(newRow);
     editingRows.value = [...editingRows.value, newRow];
   }
 }
 
 function confirmDeleteAclEntry(index: number) {
-  const ip = entries.value[index];
+  const ip = displayEntries.value[index];
   console.log('Delete Ip (check) : ' + ip.id);
 
   ip_selected.value = ip;
@@ -99,11 +136,16 @@ function confirmDeleteAclEntry(index: number) {
 function deleteIp() {
   if (ip_selected.value != null) {
     console.log('Delete domain (make) :' + ip_selected.value.ip);
-
-    entries.value = entries.value.filter((val) => val.id !== ip_selected.value!.id);
+    //if (ip_selected.value.)
+    //entries.value = entries.value.filter((val) => val.id !== ip_selected.value!.id);
+    ip_selected.value.op = 'delete';
     closeIpDeleteModal();
   }
 }
+
+const displayEntries = computed(() => {
+  return entries.value.filter((item) => {return item.op != 'delete'})
+})
 </script>
 
 <template>
@@ -121,6 +163,7 @@ function deleteIp() {
         v-model.trim="acl_data!.name"
         required="true"
         autofocus
+        :disabled="!is_admin"
         :invalid="submitted && !acl_data!.name"
         fluid
       />
@@ -129,14 +172,13 @@ function deleteIp() {
     <br />
     <div>
       <DataTable
-        :value="entries"
+        :value="displayEntries"
         dataKey="id"
         scrollable
         scrollHeight="400px"
         editMode="row"
         v-model:editingRows="editingRows"
         @row-edit-save="onRowEditSave"
-
       >
         <template #empty> No IPs defined. </template>
         <template #loading> Loading IPs data. Please wait...</template>
@@ -154,6 +196,11 @@ function deleteIp() {
           </div>
         </template>
         <Column field="ip" header="IP" sortable>
+          <template #editor="{ data, field }">
+            <InputText v-model="data[field]" fluid />
+          </template>
+        </Column>
+        <Column field="subnet" header="Subnet" sortable style="width: 25%">
           <template #editor="{ data, field }">
             <InputText v-model="data[field]" fluid />
           </template>

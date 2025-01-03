@@ -35,4 +35,15 @@ export default class AclAPIService extends APIService {
       throw error;
     }
   }
+
+  async updateAclEntry(acl_id: string, updated: AclItemEntity[]): Promise<AclItemEntity[]> {
+    try {
+      const dto = JSON.stringify({ entries: updated });
+      const response = await this.wsClient.patch(`service/${this.service_id}/acl/${acl_id}/entries`, dto);
+      return response.data;
+    } catch (error) {
+      console.error(error);
+      throw error;
+    }
+  }
 }
