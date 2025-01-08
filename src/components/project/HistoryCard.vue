@@ -61,7 +61,7 @@ function refresh() {
               activitie.attributes.username = result_user.name;
             })
             .catch((error) => {
-              toast.add({ severity: 'error', summary: 'Error', detail: error, life: 3000 });
+              toast.add({ severity: 'error', summary: 'Error', detail: error, life: 5000 });
             });
         } else {
           activitie.attributes.username = userInCache.name;
@@ -69,7 +69,7 @@ function refresh() {
       });
     })
     .catch((error) => {
-      toast.add({ severity: 'error', summary: 'Error', detail: error, life: 3000 });
+      toast.add({ severity: 'error', summary: 'Error', detail: error, life: 5000 });
     });
 }
 watchEffect(refresh);
@@ -113,7 +113,7 @@ watchEffect(refresh);
             <span>{{ $d(slotProps.data.attributes.created_at, 'long') }}</span>
           </template>
         </Column>
-        <Column field="attributes.description" header="Event" style="width: 30%" />
+        <Column field="attributes.description" header="Event" style="width: 30%" class="wrap" />
         <Column field="attributes.username" header="User" style="width: 10%" />
       </DataTable>
     </template>

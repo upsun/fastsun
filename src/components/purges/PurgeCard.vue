@@ -34,11 +34,11 @@ function purgeAll() {
   purgeService
     .purgeAll()
     .then(() => {
-      toast.add({ severity: 'info', summary: 'Purged', life: 3000 });
+      toast.add({ severity: 'info', summary: 'Purge All', detail: 'Process to purge all with success !\nThis will be applied in a few seconds...', life: 5000 });
       eventBus.emit(EventType.LOG_REFRESH);
     })
     .catch((error) => {
-      toast.add({ severity: 'error', summary: 'Error', detail: error[0], life: 3000 });
+      toast.add({ severity: 'error', summary: 'Purge All error', detail: error[0], life: 5000 });
     });
 }
 
@@ -56,12 +56,12 @@ function purgeUrl() {
       purgeService
         .purgeUrl(url2purge.value)
         .then(() => {
-          toast.add({ severity: 'info', summary: 'Purged', detail: 'for ' + url2purge.value, life: 3000 });
+          toast.add({ severity: 'info', summary: 'Purge URL', detail: 'Process to purge ' + url2purge.value + '\nThis will be applied in a few seconds...', life: 5000 });
           eventBus.emit(EventType.LOG_REFRESH);
           closeModal();
         })
         .catch((error) => {
-          toast.add({ severity: 'error', summary: 'Error', detail: error[0], life: 3000 });
+          toast.add({ severity: 'error', summary: 'Purge URL error', detail: error[0], life: 5000 });
         });
     }
   }

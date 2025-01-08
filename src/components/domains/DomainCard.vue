@@ -47,7 +47,7 @@ function refresh() {
       }
     })
     .catch((error) => {
-      toast.add({ severity: 'error', summary: 'Error', detail: error, life: 3000 });
+      toast.add({ severity: 'error', summary: 'Error', detail: error, life: 5000 });
     });
 }
 watchEffect(refresh);
@@ -109,7 +109,7 @@ function deleteDomain() {
     domains.value = domains.value.filter((val) => val.id !== domain_selected.value!.id);
     closeDomainDeleteModal();
 
-    toast.add({ severity: 'success', summary: 'Successful', detail: 'Domain Deleted', life: 3000 });
+    toast.add({ severity: 'success', summary: 'Successful', detail: 'Domain Deleted', life: 5000 });
   }
 }
 </script>

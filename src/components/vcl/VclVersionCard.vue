@@ -41,7 +41,7 @@ function refresh() {
       }
     })
     .catch((error) => {
-      toast.add({ severity: 'error', summary: 'Error', detail: error, life: 3000 });
+      toast.add({ severity: 'error', summary: 'Error', detail: error, life: 5000 });
     });
 }
 watchEffect(refresh);
@@ -73,7 +73,7 @@ function showVCL(data: VclEntity) {
       openVclDisplayModal();
     })
     .catch((error) => {
-      toast.add({ severity: 'error', summary: 'Error', detail: error, life: 3000 });
+      toast.add({ severity: 'error', summary: 'Error', detail: error, life: 5000 });
     });
 }
 </script>
@@ -117,7 +117,7 @@ function showVCL(data: VclEntity) {
             <span class="pi pi-lock" v-else></span>
           </template>
         </Column>
-        <Column field="comment" header="Comment" sortable style="width: 30%" />
+        <Column field="comment" header="Comment" sortable style="width: 30%" class="wrap" />
         <Column field="created_at" header="Created at (UTC)" sortable style="width: 10%">
           <template #body="slotProps">
             <span>{{ $d(slotProps.data.created_at, 'long') }}</span>

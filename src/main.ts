@@ -56,6 +56,9 @@ const i18n = createI18n({
   datetimeFormats: dateTimeFormats,
 });
 
+const xpath = "//div[text()='Loading...']";
+const matchingElement = document.evaluate(xpath, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue || '';
+
 const _app = createApp(App)
   .use(i18n)
   .use(router)
@@ -69,4 +72,5 @@ const _app = createApp(App)
   .component('Card', Card)
   .component('Button', Button)
   // @see https://vuejs.org/guide/components/provide-inject
-  .mount('#app');
+  .mount(matchingElement as Element);
+  //.mount('#app');

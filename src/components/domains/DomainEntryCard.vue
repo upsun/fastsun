@@ -47,7 +47,7 @@ function saveDomain() {
 
   // if (true) {
   closeModal(true);
-  toast.add({ severity: 'success', summary: 'Successful', detail: 'Domain Created', life: 3000 });
+  toast.add({ severity: 'success', summary: 'Successful', detail: 'Domain Created', life: 5000 });
   // }
 }
 </script>

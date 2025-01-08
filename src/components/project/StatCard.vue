@@ -67,7 +67,7 @@ onMounted(() => {
       if (!lock.value) {
         getNextStat();
       }
-    }, 1000);
+    }, 2000);
   }
 });
 
@@ -95,7 +95,7 @@ function getNextStat() {
       }
     })
     .catch((error) => {
-      toast.add({ severity: 'error', summary: 'Error', detail: error, life: 3000 });
+      toast.add({ severity: 'error', summary: 'Error', detail: error, life: 5000 });
     })
     .finally(() => {
       lock.value = false;

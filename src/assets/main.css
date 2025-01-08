@@ -35,6 +35,11 @@ main {
   margin-right: 0.5em;
 }
 
+.wrap {
+  text-wrap-mode: wrap !important;
+  width: 30em;
+}
+
 /* a,
 .green {
   text-decoration: none;

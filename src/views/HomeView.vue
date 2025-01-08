@@ -49,7 +49,7 @@ function refresh() {
         }
       })
       .catch((error) => {
-        toast.add({ severity: 'error', summary: 'Error', detail: error, life: 3000 });
+        toast.add({ severity: 'error', summary: 'Error', detail: error, life: 5000 });
       });
   }
 }

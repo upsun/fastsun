@@ -57,12 +57,12 @@ function refresh() {
             acl.entries = result;
           })
           .catch((error) => {
-            toast.add({ severity: 'error', summary: 'Error', detail: error, life: 3000 });
+            toast.add({ severity: 'error', summary: 'Error', detail: error, life: 5000 });
           });
       });
     })
     .catch((error) => {
-      toast.add({ severity: 'error', summary: 'Error', detail: error, life: 3000 });
+      toast.add({ severity: 'error', summary: 'Error', detail: error, life: 5000 });
     });
 }
 watchEffect(refresh);
@@ -76,7 +76,6 @@ function cleanSelected() {
   acl_selected.value = {} as AclEntity;
   acl_selected.value.entries = [] as AclItemEntity[];
 }
-
 function setSelected(acl: AclEntity) {
   acl_selected.value = acl;
 }
@@ -87,7 +86,9 @@ function openAclEditModal() {
 function closeAclEditModal(updated: boolean) {
   editAclDialog.value = false;
   cleanSelected();
-  refresh();
+  if (updated) {
+    refresh();
+  }
 }
 
 function openAclDeleteModal() {
@@ -119,7 +120,6 @@ function confirmDeleteAcl(acl: AclEntity) {
   setSelected(acl);
   openAclDeleteModal();
 }
-
 function deleteAcl() {
   if (acl_selected.value) {
     console.log('Delete ACL (make): ' + acl_selected.value.id);
@@ -128,7 +128,7 @@ function deleteAcl() {
     acls.value = acls.value.filter((val: AclEntity) => val.id !== acl_selected.value!.id);
     closeAclDeleteModal();
 
-    toast.add({ severity: 'success', summary: 'Successful', detail: 'ACL Deleted', life: 3000 });
+    toast.add({ severity: 'success', summary: 'Successful', detail: 'ACL Deleted', life: 5000 });
   }
 }
 </script>
@@ -173,9 +173,6 @@ function deleteAcl() {
         </template>
         <template #empty> No ACL found. </template>
         <template #loading> Loading ACLs data. Please wait. </template>
-        <!-- <Column selectionMode="multiple" headerStyle="width: 3rem"></Column> -->
-        <!-- <Column expander style="width: 5rem" /> -->
-        <!-- <Column field="id" header="ID" sortable style="width: 25%"></Column> -->
         <Column field="name" header="Name" sortable></Column>
         <Column field="created_at" header="Created at (UTC)" sortable>
           <template #body="slotProps">

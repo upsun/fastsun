@@ -44,7 +44,7 @@ const idCounter = ref<number>(-1);
 const localStore = new LocalStore();
 const service_token = localStore.getFastlyToken() || '';
 function refresh() {
-  console.log('Load ACL entity!');
+  console.log('Load ACL: ' + props.acl_data!.id );
 
   //TODO call remove API
   if (props.acl_data === undefined || Object.keys(props.acl_data).length === 0) {
@@ -90,27 +90,29 @@ function onRowEditSave(event: DataTableRowEditSaveEvent) {
 }
 
 function saveACL() {
-  //TODO Save by API
-  // saveACL(acl
-  //if props.acl_data?.name != e
+  console.log('Save ACL: ' + props.acl_data!.id);
+  //TODO Save by API the ACL (create/update)
 
+  //// Update Entries.
+  console.log('Save ACL entries: ' + props.acl_data!.id);
   // Only item to update
   const updated = entries.value.filter((entrie: AclItemEntity) => {
     return entrie.op != undefined && entrie.op != '';
   });
 
   // Call API for entry https://www.fastly.com/documentation/reference/api/acls/acl-entry/#bulk-update-acl-entries
-  const aclApi = new AclAPIService(props.acl_data!.service_id, service_token);
-  aclApi.updateAclEntry(props.acl_data!.id, toRaw(updated)).then(() => {
-    closeModal(true);
-    toast.add({ severity: 'success', summary: 'Successful', detail: 'Acl Created', life: 3000 });
-  }).catch((error) => {
-    toast.add({ severity: 'error', summary: 'Error', detail: error, life: 3000 });
-  });
+  if (updated.length > 0) {
+    const aclApi = new AclAPIService(props.acl_data!.service_id, service_token);
 
-  // if (true) {
-
-  // }
+    aclApi
+      .updateAclEntry(props.acl_data!.id, toRaw(updated))
+      .then(() => {
+        closeModal(true);
+        toast.add({ severity: 'success', summary: 'ACL created !', detail: 'Acl Created!\n', life: 5000 });
+      }).catch((error) => {
+        toast.add({ severity: 'error', summary: 'Error Create ACL', detail: error, life: 5000 });
+      });
+  }
 }
 
 function addIp() {
@@ -126,16 +128,16 @@ function addIp() {
 }
 
 function confirmDeleteAclEntry(index: number) {
-  const ip = displayEntries.value[index];
-  console.log('Delete Ip (check) : ' + ip.id);
+  const ipEntity = displayEntries.value[index];
+  console.log('Delete IP (check): ' + ipEntity.id);
 
-  ip_selected.value = ip;
+  ip_selected.value = ipEntity;
   openIpDeleteModal();
 }
 
 function deleteIp() {
   if (ip_selected.value != null) {
-    console.log('Delete domain (make) :' + ip_selected.value.ip);
+    console.log('Delete IP (make): ' + ip_selected.value.id);
     //if (ip_selected.value.)
     //entries.value = entries.value.filter((val) => val.id !== ip_selected.value!.id);
     ip_selected.value.op = 'delete';
