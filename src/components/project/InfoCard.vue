@@ -44,6 +44,7 @@ const props = defineProps({
       ><br />
       <span>Current Version : </span><span>{{ vcl_version }}</span><br /><br />
       <PurgesCard :service_id="service_id" /><br />
+      <span><a href="https://fiddle.fastly.dev/">Fiddle</a>(for test)</span>
     </template>
   </Card>
 </template>
