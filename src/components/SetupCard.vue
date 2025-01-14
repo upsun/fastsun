@@ -28,7 +28,7 @@ function saveId() {
     apiStorage.setFastlyId(fastly_id.value);
     apiStorage.setFastlyToken(fastly_token.value);
 
-    closeModal();
+    closeModal(true);
   }
 }
 </script>
