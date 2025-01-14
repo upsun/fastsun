@@ -53,6 +53,7 @@ function saveId() {
         <label for="fastly_token" class="block font-bold mb-3">Fastly Service Token</label>
         <InputText
           id="fastly_token"
+          type="password"
           v-model.trim="fastly_token"
           required="true"
           autofocus
