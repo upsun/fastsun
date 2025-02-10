@@ -50,6 +50,7 @@ const dateTimeFormats: I18nOptions["datetimeFormats"] = {
 };
 const i18n = createI18n({
   // something vue-i18n options here ...
+  legacy: false, // you must set `false`, to use Composition API
   locale: 'en-US',
   fallbackLocale: 'en-US',
   availableLocales: ['fr-FR', 'en-US'],
