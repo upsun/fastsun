@@ -4,12 +4,14 @@
         {
             "type": "chrome",
             "request": "launch",
-            "name": "vuejs: chrome",
+            "name": "fastsun Run",
             "url": "http://localhost:8080",
             "webRoot": "${workspaceFolder}/src",
             "sourceMapPathOverrides": {
                 "webpack:///src/*": "${webRoot}/*"
-            }
+            },
+            "sourceMaps": true,
+            "preLaunchTask": "vuejs: start"
         },
     ]
 }

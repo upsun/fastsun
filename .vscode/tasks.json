@@ -1,0 +1,23 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "vuejs: start",
+            "type": "npm",
+            "script": "dev",
+            "isBackground": true,
+            "problemMatcher": [{
+                "base": "$tsc-watch",
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": "vite --port 8080",
+                    "endsPattern": "press h + enter to show help"
+                }
+            }],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        }
+    ]
+}
