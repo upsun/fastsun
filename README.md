@@ -10,7 +10,7 @@ This SPA display CDN manager (Fastly).
 
 > Note : Currently Read-only (Write is WIP) and purge all application.
 
-Open on your browser : https://master-7rqtwti-erwlgagf6enrq.eu-5.platformsh.site/ 
+Open on your browser : [https://fastsun.plugins.pltfrm.sh/](https://fastsun.plugins.pltfrm.sh/)
 
 Enter your :
 - FASTLY_ID
