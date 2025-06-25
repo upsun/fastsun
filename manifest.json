@@ -1,19 +1,16 @@
 {
     "_self": "https://fastsun.plugins.pltfrm.sh/manifest.json",
-    "url": "https://fastsun.plugins.pltfrm.sh/index.js",
+    "url": "https://fastsun.plugins.pltfrm.sh/",
     "format": "amd",
     "scopes": [],
     "id": "erwlgagf6enrq",
+    "type": "iframe",
     "name": "FastSun",
     "hooks": [
-    {
-        "name": "project",
-        "route": "/:organizationId/:projectId/",
-        "type": "tab"
-    },
-    {
-        "name": "app-environment",
-        "route": "/:organizationId/:projectId/:environmentId/",
-        "type": "tab"
-    }]
+        {
+            "name": "project",
+            "route": "/:organizationId/:projectId/",
+            "type": "tab"
+        }
+    ]
 }
