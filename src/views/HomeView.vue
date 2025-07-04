@@ -65,10 +65,10 @@ function reload() {
   <main>
     <SetuCard :service_id="service_id" v-if="!serviceIsDefined" @update:visible="reload" />
     <InfoCard :service_id="service_id" :vcl_version="vcl_version" v-if="serviceIsDefined && vclVersIsDefined" :project_detail="project_detail"/>
-    <StatCard :service_id="service_id" v-if="serviceIsDefined && isAdmin" />
+    <StatCard :service_id="service_id" v-if="serviceIsDefined" />
     <DomaCard :service_id="service_id" :vcl_version="vcl_version" v-if="serviceIsDefined && vclVersIsDefined && isAdmin" />
     <VersCard :service_id="service_id" v-if="serviceIsDefined && isAdmin" />
-    <HistCard :service_id="service_id" v-if="serviceIsDefined && isAdmin" />
+    <HistCard :service_id="service_id" v-if="serviceIsDefined" />
     <AclsCard :service_id="service_id" :vcl_version="vcl_version" v-if="serviceIsDefined && vclVersIsDefined" />
   </main>
 </template>
