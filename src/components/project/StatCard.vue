@@ -5,7 +5,6 @@ import Chart from 'primevue/chart';
 import ProjectAPIService from './project.service';
 import 'chartjs-adapter-date-fns';
 import LocalStore from '@/stores/localStorage';
-import { error } from 'console';
 
 // Init
 const localStore = new LocalStore()
