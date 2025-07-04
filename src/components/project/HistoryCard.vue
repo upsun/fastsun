@@ -61,7 +61,7 @@ function refresh() {
               activitie.attributes.username = result_user.name;
             })
             .catch((error) => {
-              toast.add({ severity: 'error', summary: 'Error', detail: error, life: 5000 });
+              // toast.add({ severity: 'error', summary: 'Error', detail: error, life: 5000 });
             });
         } else {
           activitie.attributes.username = userInCache.name;

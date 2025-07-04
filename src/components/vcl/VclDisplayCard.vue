@@ -27,8 +27,9 @@ function copy(content: string) {
     v-bind:visible="vcl_state_dialog"
     :modal="true"
     dismissableMask
+    maximizable
     header="VCL Generated"
-    :style="{}"
+    :style="{ width: '80rem' }"
     :breakpoints="{ '1199px': '75vw', '575px': '90vw' }"
   >
     <div class="flex flex-wrap gap-2 items-center justify-between">

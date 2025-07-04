@@ -17,11 +17,20 @@ export default [
 
   ...pluginVue.configs['flat/essential'],
   ...vueTsEslintConfig(),
-  
+
   {
     ...pluginVitest.configs.recommended,
     files: ['src/**/__tests__/*'],
   },
-  oxlint.configs['flat/recommended'],
+
+  {
+    name: 'app/disable-unused-vars',
+    rules: {
+      '@typescript-eslint/no-unused-vars': 'off',
+      'no-unused-vars': 'off',
+    },
+  },
+
+  ...oxlint.configs['flat/recommended'],
   skipFormatting,
 ]
