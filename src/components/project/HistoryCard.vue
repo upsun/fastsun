@@ -49,24 +49,24 @@ function refresh() {
         });
       }
 
-      activities.value.forEach((activitie: ActivityEntity) => {
-        const user_id = activitie.attributes.user_id;
-        const userInCache = cache.getUser(user_id);
+      // activities.value.forEach((activitie: ActivityEntity) => {
+      //   const user_id = activitie.attributes.user_id;
+      //   const userInCache = cache.getUser(user_id);
 
-        if (!userInCache) {
-          projectService
-            .getUser(user_id)
-            .then((result_user) => {
-              cache.setUser(result_user);
-              activitie.attributes.username = result_user.name;
-            })
-            .catch((error) => {
-              toast.add({ severity: 'error', summary: 'Error', detail: error, life: 5000 });
-            });
-        } else {
-          activitie.attributes.username = userInCache.name;
-        }
-      });
+      //   if (!userInCache) {
+      //     projectService
+      //       .getUser(user_id)
+      //       .then((result_user) => {
+      //         cache.setUser(result_user);
+      //         activitie.attributes.username = result_user.name;
+      //       })
+      //       .catch((error) => {
+      //         toast.add({ severity: 'error', summary: 'Error', detail: error, life: 5000 });
+      //       });
+      //   } else {
+      //     activitie.attributes.username = userInCache.name;
+      //   }
+      // });
     })
     .catch((error) => {
       toast.add({ severity: 'error', summary: 'Error', detail: error, life: 5000 });
@@ -114,7 +114,7 @@ watchEffect(refresh);
           </template>
         </Column>
         <Column field="attributes.description" header="Event" style="width: 30%" class="wrap" />
-        <Column field="attributes.username" header="User" style="width: 10%" />
+        <!-- <Column field="attributes.username" header="User" style="width: 10%" /> -->
       </DataTable>
     </template>
   </Card>
