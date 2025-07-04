@@ -9,7 +9,7 @@ import LocalStore from '@/stores/localStorage';
 // Init
 const localStore = new LocalStore()
 const service_token = localStore.getFastlyToken() || '';
-const sampleCount = 20;
+const sampleCount = 60;
 const toast = useToast();
 const props = defineProps({
   service_id: {
@@ -32,7 +32,7 @@ const chartData = {
       fill: true,
       borderColor: '#2196F3',
       backgroundColor: '#2196F320',
-      tension: 0.01,
+      tension: 0.1,
       borderWidth: 1,
       yAxisID: 'y_cnt'
     },
@@ -138,7 +138,7 @@ onMounted(() => {
       if (!lock.value) {
         getNextStat();
       }
-    }, 2000);
+    }, 1000);
   }
 });
 
@@ -170,9 +170,23 @@ function getNextStat() {
         const cnt_request = result.Data[0].aggregated.requests;
         const cnt_hit = result.Data[0].aggregated.hits;
         const cnt_error = result.Data[0].aggregated.errors;
-        const cnt_origin_offload = result.Data[0].aggregated.origin_offload;
-        const cnt_hit_ratio = (cnt_hit/cnt_request)*100;
-        const cnt_cache_coverage = (cnt_hit/(cnt_hit+cnt_request))*100;
+        const cnt_miss = result.Data[0].aggregated.miss;
+        const cnt_pass = result.Data[0].aggregated.pass;
+
+        let cnt_origin_offload = result.Data[0].aggregated.origin_offload*100;
+        if (!cnt_origin_offload) {
+          cnt_origin_offload = 0;
+        }
+
+        let cnt_hit_ratio = 0;
+        if (cnt_hit+cnt_miss > 0) {
+          cnt_hit_ratio = (cnt_hit/(cnt_hit+cnt_miss))*100;
+        }
+
+        let cnt_cache_coverage = 0;
+        if ((cnt_hit+cnt_miss+cnt_pass) > 0) {
+          cnt_cache_coverage = ((cnt_hit+cnt_miss)/(cnt_hit+cnt_miss+cnt_pass))*100;
+        }
 
         chart.data.labels.push(new Date().valueOf());
         chart.data.datasets[0].data.push(cnt_request);
