@@ -10,4 +10,23 @@
     <div id="app">Loading...</div>
     <script type="module" src="/src/main.ts"></script>
   </body>
+  <script>
+function sendHeightToParent() {
+  const height = document.documentElement.scrollHeight;
+  parent.postMessage({ action: 'RESIZE_IFRAME', height: height }, '*');
+}
+
+// Observe changes in the document body or DOM
+const observer = new ResizeObserver(() => {
+  sendHeightToParent();
+});
+
+observer.observe(document.body);
+
+// Optionally send initial height
+window.addEventListener('load', () => {
+  sendHeightToParent();
+});
+
+  </script>
 </html>
