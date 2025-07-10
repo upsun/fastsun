@@ -29,10 +29,12 @@ main {
 
 .p-card {
   margin-bottom: 1.5em;
+  border-radius: var(--p-border-radius-lg);
 }
 
 .p-button {
   margin-right: 0.5em;
+  border-radius: var(--p-border-radius-xl);
 }
 
 .wrap {

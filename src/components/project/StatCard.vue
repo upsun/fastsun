@@ -54,7 +54,7 @@ const commonDatasetOptions = {
 
 const now = Date.now(); // en millisecondes
 const timestamps: number[] = Array.from({ length: sampleCount }, (_, i) => {
-  return now - (sampleCount-1 - i) * 1000;
+  return now - (sampleCount - 1 - i) * 1000;
 });
 
 /**
@@ -62,7 +62,6 @@ const timestamps: number[] = Array.from({ length: sampleCount }, (_, i) => {
  * Defines all the metrics to be displayed in the chart
  */
 const chartData = {
-
   labels: timestamps,
   datasets: [
     {
@@ -70,7 +69,7 @@ const chartData = {
       borderColor: '#2196F3',
       backgroundColor: '#2196F320',
       yAxisID: 'y_cnt',
-      data: new Array(sampleCount).fill(NaN),
+      data: Array.from({ length: sampleCount }).fill(NaN),
       ...commonDatasetOptions,
     },
     {
@@ -78,32 +77,32 @@ const chartData = {
       borderColor: '#4CAF50',
       backgroundColor: '#4CAF5020',
       yAxisID: 'y_cnt',
-      data: new Array(sampleCount).fill(NaN),
-      ...commonDatasetOptions
+      data: Array.from({ length: sampleCount }).fill(NaN),
+      ...commonDatasetOptions,
     },
     {
       label: 'Pass',
       borderColor: '#9C27B0',
       backgroundColor: '#9C27B020',
       yAxisID: 'y_cnt',
-      data: new Array(sampleCount).fill(NaN),
-      ...commonDatasetOptions
+      data: Array.from({ length: sampleCount }).fill(NaN),
+      ...commonDatasetOptions,
     },
     {
       label: 'Miss',
       borderColor: '#FF7043',
       backgroundColor: '#FF704320',
       yAxisID: 'y_cnt',
-      data: new Array(sampleCount).fill(NaN),
-      ...commonDatasetOptions
+      data: Array.from({ length: sampleCount }).fill(NaN),
+      ...commonDatasetOptions,
     },
     {
       label: 'Error',
       borderColor: '#F44336',
       backgroundColor: '#F4433620',
       yAxisID: 'y_cnt',
-      data: new Array(sampleCount).fill(NaN),
-      ...commonDatasetOptions
+      data: Array.from({ length: sampleCount }).fill(NaN),
+      ...commonDatasetOptions,
     },
     {
       label: 'Origin offload',
@@ -111,8 +110,8 @@ const chartData = {
       backgroundColor: '#FF704320',
       yAxisID: 'y_per',
       hidden: true,
-      data: new Array(sampleCount).fill(NaN),
-      ...commonDatasetOptions
+      data: Array.from({ length: sampleCount }).fill(NaN),
+      ...commonDatasetOptions,
     },
     {
       label: 'Hit ratio',
@@ -120,8 +119,8 @@ const chartData = {
       backgroundColor: '#9C27B020',
       yAxisID: 'y_per',
       hidden: true,
-      data: new Array(sampleCount).fill(NaN),
-      ...commonDatasetOptions
+      data: Array.from({ length: sampleCount }).fill(NaN),
+      ...commonDatasetOptions,
     },
     {
       label: 'Cache Coverage',
@@ -129,8 +128,8 @@ const chartData = {
       backgroundColor: '#00BCD420',
       yAxisID: 'y_per',
       hidden: true,
-      data: new Array(sampleCount).fill(NaN),
-      ...commonDatasetOptions
+      data: Array.from({ length: sampleCount }).fill(NaN),
+      ...commonDatasetOptions,
     },
   ],
 };
@@ -148,7 +147,11 @@ const verticalLinePlugin = {
    * @param {unknown} args - Event arguments containing cursor position
    */
   afterEvent(chart, args) {
-    const {ctx, chartArea: {top, bottom}, scales: {x}} = chart;
+    const {
+      ctx,
+      chartArea: { top, bottom },
+      scales: { x },
+    } = chart;
     const event = args.event;
 
     if (event.x >= x.left && event.x <= x.right) {
@@ -161,7 +164,11 @@ const verticalLinePlugin = {
    * @param {unknown} chart - The Chart.js instance
    */
   afterDraw(chart) {
-    const {ctx, chartArea: {top, bottom}, _cursorX} = chart;
+    const {
+      ctx,
+      chartArea: { top, bottom },
+      _cursorX,
+    } = chart;
     if (_cursorX) {
       ctx.save();
       ctx.beginPath();
@@ -172,7 +179,7 @@ const verticalLinePlugin = {
       ctx.stroke();
       ctx.restore();
     }
-  }
+  },
 };
 
 /**
@@ -195,11 +202,11 @@ const chartOptions = ref({
         boxWidth: 12,
         padding: 10,
         font: {
-          size: 11
+          size: 11,
         },
         usePointStyle: true,
-        pointStyle: 'rect'
-      }
+        pointStyle: 'rect',
+      },
     },
     tooltip: {
       callbacks: {
@@ -210,7 +217,7 @@ const chartOptions = ref({
          * @param {object} context.parsed - Parsed data point with x and y values
          * @returns {string} Formatted tooltip label with appropriate units
          */
-        label: function(context: { dataset: { label: string; yAxisID: string }; parsed: { y: number } }) {
+        label: function (context: { dataset: { label: string; yAxisID: string }; parsed: { y: number } }) {
           const datasetLabel = context.dataset.label || '';
           const value = context.parsed.y;
 
@@ -220,11 +227,11 @@ const chartOptions = ref({
           } else {
             return `${datasetLabel}: ${value} req`;
           }
-        }
+        },
       },
       mode: 'index',
       intersect: false,
-    }
+    },
   },
   scales: {
     y_cnt: {
@@ -240,14 +247,14 @@ const chartOptions = ref({
          * @param {number} value - The tick value
          * @returns {string} Formatted tick label with 'req' suffix
          */
-        callback: function(value: number) {
+        callback: function (value: number) {
           return value + ' req';
-        }
+        },
       },
       title: {
         display: true,
-        text: 'Count'
-      }
+        text: 'Count',
+      },
     },
     y_per: {
       type: 'linear',
@@ -261,13 +268,13 @@ const chartOptions = ref({
          * @param {number} value - The tick value
          * @returns {string} Formatted tick label with '%' suffix
          */
-        callback: function(value: number) {
+        callback: function (value: number) {
           return value + '%';
-        }
+        },
       },
       title: {
         display: true,
-        text: 'Percentage'
+        text: 'Percentage',
       },
       grid: {
         drawOnChartArea: false,
@@ -284,8 +291,8 @@ const chartOptions = ref({
       },
       title: {
         display: true,
-        text: 'Time'
-      }
+        text: 'Time',
+      },
     },
   },
 });
@@ -363,9 +370,9 @@ function getNextStat() {
         // Slice old values to maintain maximum sample count
         if (chart.data.labels.length >= sampleCount) {
           chart.data.labels = chart.data.labels.slice(1);
-            chart.data.datasets.forEach((dataset: { data: string; }, _idx: number) => {
+          chart.data.datasets.forEach((dataset: { data: string }, _idx: number) => {
             dataset.data = dataset.data.slice(1);
-            });
+          });
         }
 
         // Extract raw metrics from API response
@@ -376,21 +383,21 @@ function getNextStat() {
         const cnt_pass = result.Data[0].aggregated.pass || 0;
 
         // Calculate origin offload percentage
-        let cnt_origin_offload = result.Data[0].aggregated.origin_offload*100;
+        let cnt_origin_offload = result.Data[0].aggregated.origin_offload * 100;
         if (!cnt_origin_offload) {
           cnt_origin_offload = 0;
         }
 
         // Calculate hit ratio percentage
         let cnt_hit_ratio = 0;
-        if (cnt_hit+cnt_miss > 0) {
-          cnt_hit_ratio = (cnt_hit/(cnt_hit+cnt_miss))*100;
+        if (cnt_hit + cnt_miss > 0) {
+          cnt_hit_ratio = (cnt_hit / (cnt_hit + cnt_miss)) * 100;
         }
 
         // Calculate cache coverage percentage
         let cnt_cache_coverage = 0;
-        if ((cnt_hit+cnt_miss+cnt_pass) > 0) {
-          cnt_cache_coverage = ((cnt_hit+cnt_miss)/(cnt_hit+cnt_miss+cnt_pass))*100;
+        if (cnt_hit + cnt_miss + cnt_pass > 0) {
+          cnt_cache_coverage = ((cnt_hit + cnt_miss) / (cnt_hit + cnt_miss + cnt_pass)) * 100;
         }
 
         // Add new data points to chart datasets
@@ -419,12 +426,9 @@ function getNextStat() {
 
 <template>
   <Card>
-    <template #title>Real-time statistic
-      <Button
-        :icon="icon"
-        class="p-button-text p-button-secondary"
-        @click="pauseResume"
-      />
+    <template #title
+      >Real-time statistic
+      <Button :icon="icon" class="p-button-text p-button-secondary" @click="pauseResume" />
     </template>
     <template #content>
       <Chart

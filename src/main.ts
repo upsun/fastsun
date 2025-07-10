@@ -18,7 +18,7 @@ import 'primeicons/primeicons.css';
 import App from './App.vue';
 import router from './router';
 
-const dateTimeFormats: I18nOptions["datetimeFormats"] = {
+const dateTimeFormats: I18nOptions['datetimeFormats'] = {
   'en-US': {
     short: {
       year: 'numeric',
@@ -58,7 +58,8 @@ const i18n = createI18n({
 });
 
 const xpath = "//div[text()='Loading...']";
-const matchingElement = document.evaluate(xpath, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue || '';
+const matchingElement =
+  document.evaluate(xpath, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue || '';
 
 const _app = createApp(App)
   .use(i18n)
@@ -66,6 +67,12 @@ const _app = createApp(App)
   .use(PrimeVue, {
     theme: {
       preset: Aura,
+      options: {
+        cssLayer: {
+          name: 'primevue',
+          order: 'tailwind-base, primevue, tailwind-utilities',
+        },
+      },
     },
   })
   .use(ToastService)
@@ -74,4 +81,4 @@ const _app = createApp(App)
   .component('Button', Button)
   // @see https://vuejs.org/guide/components/provide-inject
   .mount(matchingElement as Element);
-  //.mount('#app');
+//.mount('#app');

@@ -1,55 +1,131 @@
-/* color palette from <https://github.com/vuejs/theme> */
+/* Essential CSS variables for light/dark theme support */
 :root {
-  --vt-c-white: #ffffff;
-  --vt-c-white-soft: #f8f8f8;
-  --vt-c-white-mute: #f2f2f2;
+  --color-text: #2c3e50;
+  --color-background: #ffffff;
 
-  --vt-c-black: #181818;
-  --vt-c-black-soft: #222222;
-  --vt-c-black-mute: #282828;
+  --color-upsun-violet-100: #efedff;
+  --color-upsun-violet-200: #dfdaff;
+  --color-upsun-violet-300: #bfb5ff;
+  --color-upsun-violet-400: #a090ff;
+  --color-upsun-violet-500: #806bff;
+  --color-upsun-violet-600: #6046ff;
+  --color-upsun-violet-700: #4d38cc;
+  --color-upsun-violet-800: #3a2a99;
+  --color-upsun-violet-900: #261c66;
+  --color-upsun-violet-1000: #130e33;
+  --color-upsun-grey-0: #ffffff;
+  --color-upsun-grey-100: #f0f2f5;
+  --color-upsun-grey-200: #d8dbdc;
+  --color-upsun-grey-300: #b1b7ba;
+  --color-upsun-grey-400: #8b9397;
+  --color-upsun-grey-500: #646f75;
+  --color-upsun-grey-600: #3d4b52;
+  --color-upsun-grey-700: #313c42;
+  --color-upsun-grey-800: #252d31;
+  --color-upsun-grey-900: #181e21;
+  --color-upsun-grey-1000: #0c0f10;
+  --color-upsun-lime-100: #fbfee6;
+  --color-upsun-lime-200: #f7fecc;
+  --color-upsun-lime-300: #eefc99;
+  --color-upsun-lime-400: #e6fb66;
+  --color-upsun-lime-500: #ddf933;
+  --color-upsun-lime-600: #d5f800;
+  --color-upsun-lime-700: #aac600;
+  --color-upsun-lime-800: #809500;
+  --color-upsun-lime-900: #556300;
+  --color-upsun-lime-1000: #2b3200;
+  --color-upsun-pink-0: #fff;
+  --color-upsun-pink-100: #fde8fd;
+  --color-upsun-pink-200: #fad2fb;
+  --color-upsun-pink-300: #f6a4f7;
+  --color-upsun-pink-400: #f177f4;
+  --color-upsun-pink-500: #ed49f0;
+  --color-upsun-pink-600: #e81cec;
+  --color-upsun-pink-700: #ba16bd;
+  --color-upsun-pink-800: #8b118e;
+  --color-upsun-pink-900: #5d0b5e;
+  --color-upsun-pink-1000: #2e062f;
+  --color-platform-skye-100: #e7f0ff;
+  --color-platform-skye-200: #dae7ff;
+  --color-platform-skye-300: #b5cfff;
+  --color-platform-skye-400: #86b5ff;
+  --color-platform-skye-500: #6ea0ff;
+  --color-platform-skye-600: #4786ff;
+  --color-platform-skye-700: #0a5cff;
+  --color-platform-skye-800: #0846c3;
+  --color-platform-skye-900: #08317c;
+  --color-platform-skye-1000: #01173d;
+  --color-platform-grey-0: #ffffff;
+  --color-platform-grey-100: #f0f2f5;
+  --color-platform-grey-200: #e7e7e7;
+  --color-platform-grey-300: #dbdbdf;
+  --color-platform-grey-400: #bac0c9;
+  --color-platform-grey-500: #98a0ab;
+  --color-platform-grey-600: #697484;
+  --color-platform-grey-700: #5f5e70;
+  --color-platform-grey-800: #4a495e;
+  --color-platform-grey-900: #302f45;
+  --color-platform-grey-1000: #1a192b;
+  --color-platform-pink-100: #fff8f8;
+  --color-platform-pink-200: #fff2f1;
+  --color-platform-pink-300: #ffe5e4;
+  --color-platform-pink-400: #ffd9d9;
+  --color-platform-pink-500: #ffcac9;
+  --color-platform-pink-600: #ffbdbb;
+  --color-platform-pink-700: #ff9f9f;
+  --color-platform-pink-800: #e97b7b;
+  --color-platform-pink-900: #c66460;
+  --color-platform-pink-1000: #a44b48;
+  --color-platform-purple-0: #fff;
+  --color-platform-purple-100: #f5f0ff;
+  --color-platform-purple-200: #ebe1ff;
+  --color-platform-purple-300: #d8c2ff;
+  --color-platform-purple-400: #c4a4ff;
+  --color-platform-purple-500: #b185ff;
+  --color-platform-purple-600: #9d67ff;
+  --color-platform-purple-700: #7e52cc;
+  --color-platform-purple-800: #5e3e99;
+  --color-platform-purple-900: #3f2966;
+  --color-platform-purple-1000: #1f1533;
 
-  --vt-c-indigo: #2c3e50;
+  /* Custom primary color for Upsun */
+  --p-primary-50: #f1effc;
+  --p-primary-100: var(--color-upsun-violet-100);
+  --p-primary-200: var(--color-upsun-violet-200);
+  --p-primary-300: var(--color-upsun-violet-300);
+  --p-primary-400: var(--color-upsun-violet-400);
+  --p-primary-500: var(--color-upsun-violet-500);
+  --p-primary-600: var(--color-upsun-violet-600);
+  --p-primary-700: var(--color-upsun-violet-700);
+  --p-primary-800: var(--color-upsun-violet-800);
+  --p-primary-900: var(--color-upsun-violet-900);
+  --p-primary-950: var(--color-upsun-violet-1000);
 
-  --vt-c-divider-light-1: rgba(60, 60, 60, 0.29);
-  --vt-c-divider-light-2: rgba(60, 60, 60, 0.12);
-  --vt-c-divider-dark-1: rgba(84, 84, 84, 0.65);
-  --vt-c-divider-dark-2: rgba(84, 84, 84, 0.48);
+  --p-primary-color: var(--p-primary-700);
+  --p-button-primary-hover-background: var(--p-primary-800);
 
-  --vt-c-text-light-1: var(--vt-c-indigo);
-  --vt-c-text-light-2: rgba(60, 60, 60, 0.66);
-  --vt-c-text-dark-1: var(--vt-c-white);
-  --vt-c-text-dark-2: rgba(235, 235, 235, 0.64);
-}
+  --border-radius-none: 0px;
+  --border-radius-small: 2px;
+  --border-radius-medium: 4px;
+  --border-radius-large: 8px;
+  --border-radius-xlarge: 20px;
 
-/* semantic color variables for this project */
-:root {
-  --color-background: var(--vt-c-white);
-  --color-background-soft: var(--vt-c-white-soft);
-  --color-background-mute: var(--vt-c-white-mute);
-
-  --color-border: var(--vt-c-divider-light-2);
-  --color-border-hover: var(--vt-c-divider-light-1);
-
-  --color-heading: var(--vt-c-text-light-1);
-  --color-text: var(--vt-c-text-light-1);
-
-  --section-gap: 160px;
+  --p-border-radius-none: 0;
+  --p-border-radius-xs: 2px;
+  --p-border-radius-sm: var(--border-radius-small);
+  --p-border-radius-md: var(--border-radius-medium);
+  --p-border-radius-lg: var(--border-radius-large);
+  --p-border-radius-xl: var(--border-radius-xlarge);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --color-background: var(--vt-c-black);
-    --color-background-soft: var(--vt-c-black-soft);
-    --color-background-mute: var(--vt-c-black-mute);
-
-    --color-border: var(--vt-c-divider-dark-2);
-    --color-border-hover: var(--vt-c-divider-dark-1);
-
-    --color-heading: var(--vt-c-text-dark-1);
-    --color-text: var(--vt-c-text-dark-2);
+    --color-text: rgba(235, 235, 235, 0.64);
+    --color-background: #181818;
   }
 }
 
+/* Essential base styles */
 *,
 *::before,
 *::after {
@@ -62,25 +138,13 @@ body {
   min-height: 100vh;
   color: var(--color-text);
   background: var(--color-background);
-  transition:
-    color 0.5s,
-    background-color 0.5s;
-  line-height: 1.6;
   font-family:
     Inter,
     -apple-system,
     BlinkMacSystemFont,
     'Segoe UI',
     Roboto,
-    Oxygen,
-    Ubuntu,
-    Cantarell,
-    'Fira Sans',
-    'Droid Sans',
-    'Helvetica Neue',
     sans-serif;
   font-size: 15px;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  line-height: 1.6;
 }
