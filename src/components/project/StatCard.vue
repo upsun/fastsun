@@ -2,6 +2,7 @@
 import { ref, onBeforeUnmount, onMounted, computed } from 'vue';
 import { useToast } from 'primevue/usetoast';
 import Chart from 'primevue/chart';
+import type { Chart as ChartJS, ChartEvent } from 'chart.js';
 import ProjectAPIService from './project.service';
 import 'chartjs-adapter-date-fns';
 import LocalStore from '@/stores/localStorage';
@@ -140,13 +141,10 @@ const chartData = {
  */
 const verticalLinePlugin = {
   id: 'cursorLine',
-
   /**
    * Event handler for tracking cursor position
-   * @param {unknown} chart - The Chart.js instance
-   * @param {unknown} args - Event arguments containing cursor position
    */
-  afterEvent(chart, args) {
+  afterEvent(chart: ChartJS, args: { event: ChartEvent & { x: number } }) {
     const {
       ctx,
       chartArea: { top, bottom },
@@ -155,20 +153,21 @@ const verticalLinePlugin = {
     const event = args.event;
 
     if (event.x >= x.left && event.x <= x.right) {
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
       chart._cursorX = event.x;
     }
   },
 
   /**
    * Draws the vertical cursor line on the chart
-   * @param {unknown} chart - The Chart.js instance
    */
-  afterDraw(chart) {
+  afterDraw(chart: ChartJS) {
     const {
       ctx,
       chartArea: { top, bottom },
       _cursorX,
-    } = chart;
+    } = chart as ChartJS & { _cursorX?: number };
     if (_cursorX) {
       ctx.save();
       ctx.beginPath();
