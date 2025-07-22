@@ -11,7 +11,6 @@ import type AclItemEntity from './acl.interface';
 import AclAPIService from './acl.service';
 import LocalStore from '@/stores/localStorage';
 
-
 // Init
 const emit = defineEmits(['update:visible']);
 const toast = useToast();
@@ -28,8 +27,8 @@ const props = defineProps({
     type: Boolean,
     default() {
       return true;
-    }
-  }
+    },
+  },
 });
 
 // Data
@@ -44,7 +43,7 @@ const idCounter = ref<number>(-1);
 const localStore = new LocalStore();
 const service_token = localStore.getFastlyToken() || '';
 function refresh() {
-  console.log('Load ACL: ' + props.acl_data!.id );
+  console.log('FastSun > Load ACL: ' + props.acl_data!.id);
 
   //TODO call remove API
   if (props.acl_data === undefined || Object.keys(props.acl_data).length === 0) {
@@ -70,11 +69,7 @@ function closeIpDeleteModal() {
 }
 
 function isEdited(oldData: AclItemEntity, newData: AclItemEntity): boolean {
-  return (
-    oldData.ip != newData.ip ||
-    oldData.subnet != newData.subnet ||
-    oldData.comment != newData.comment
-    );
+  return oldData.ip != newData.ip || oldData.subnet != newData.subnet || oldData.comment != newData.comment;
 }
 
 function onRowEditSave(event: DataTableRowEditSaveEvent) {
@@ -90,11 +85,11 @@ function onRowEditSave(event: DataTableRowEditSaveEvent) {
 }
 
 function saveACL() {
-  console.log('Save ACL: ' + props.acl_data!.id);
+  console.log('FastSun > Save ACL: ' + props.acl_data!.id);
   //TODO Save by API the ACL (create/update)
 
   //// Update Entries.
-  console.log('Save ACL entries: ' + props.acl_data!.id);
+  console.log('FastSun > Save ACL entries: ' + props.acl_data!.id);
   // Only item to update
   const updated = entries.value.filter((entrie: AclItemEntity) => {
     return entrie.op != undefined && entrie.op != '';
@@ -109,7 +104,8 @@ function saveACL() {
       .then(() => {
         closeModal(true);
         toast.add({ severity: 'success', summary: 'ACL created !', detail: 'Acl Created!\n', life: 5000 });
-      }).catch((error) => {
+      })
+      .catch((error) => {
         toast.add({ severity: 'error', summary: 'Error Create ACL', detail: error, life: 5000 });
       });
   }
@@ -121,7 +117,13 @@ function addIp() {
   });
 
   if (!finded) {
-    const newRow = { id: idCounter.value--, ip: '8.8.8.8', subnet: '32', comment: 'Add by FastSun', op: 'create' } as never;
+    const newRow = {
+      id: idCounter.value--,
+      ip: '8.8.8.8',
+      subnet: '32',
+      comment: 'Add by FastSun',
+      op: 'create',
+    } as never;
     entries.value.unshift(newRow);
     editingRows.value = [...editingRows.value, newRow];
   }
@@ -129,7 +131,7 @@ function addIp() {
 
 function confirmDeleteAclEntry(index: number) {
   const ipEntity = displayEntries.value[index];
-  console.log('Delete IP (check): ' + ipEntity.id);
+  console.log('FastSun > Delete IP (check): ' + ipEntity.id);
 
   ip_selected.value = ipEntity;
   openIpDeleteModal();
@@ -137,7 +139,7 @@ function confirmDeleteAclEntry(index: number) {
 
 function deleteIp() {
   if (ip_selected.value != null) {
-    console.log('Delete IP (make): ' + ip_selected.value.id);
+    console.log('FastSun > Delete IP (make): ' + ip_selected.value.id);
     //if (ip_selected.value.)
     //entries.value = entries.value.filter((val) => val.id !== ip_selected.value!.id);
     ip_selected.value.op = 'delete';
@@ -146,8 +148,10 @@ function deleteIp() {
 }
 
 const displayEntries = computed(() => {
-  return entries.value.filter((item) => {return item.op != 'delete'})
-})
+  return entries.value.filter((item) => {
+    return item.op != 'delete';
+  });
+});
 </script>
 
 <template>
@@ -215,23 +219,11 @@ const displayEntries = computed(() => {
         <Column :exportable="false" style="min-width: 8rem" header="Actions">
           <template #body="{ editorInitCallback, index }">
             <Button icon="pi pi-pencil" outlined rounded class="mr-2" @click="editorInitCallback" />
-            <Button
-              icon="pi pi-trash"
-              outlined
-              rounded
-              severity="danger"
-              @click="confirmDeleteAclEntry(index)"
-            />
+            <Button icon="pi pi-trash" outlined rounded severity="danger" @click="confirmDeleteAclEntry(index)" />
           </template>
           <template #editor="{ editorSaveCallback, editorCancelCallback }">
             <Button icon="pi pi-save" text rounded @click="editorSaveCallback" />
-            <Button
-              icon="pi pi-times"
-              text
-              rounded
-              severity="danger"
-              @click="editorCancelCallback"
-            />
+            <Button icon="pi pi-times" text rounded severity="danger" @click="editorCancelCallback" />
           </template>
         </Column>
       </DataTable>
@@ -242,12 +234,7 @@ const displayEntries = computed(() => {
     </template>
   </Dialog>
 
-  <Dialog
-    v-model:visible="deleteIpDialog"
-    :style="{ width: '450px' }"
-    header="Confirm"
-    :modal="true"
-  >
+  <Dialog v-model:visible="deleteIpDialog" :style="{ width: '450px' }" header="Confirm" :modal="true">
     <div class="flex items-center gap-4">
       <i class="pi pi-exclamation-triangle !text-3xl" />
       <span v-if="ip_selected"

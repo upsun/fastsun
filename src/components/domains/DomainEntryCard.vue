@@ -25,7 +25,7 @@ const submitted = ref<boolean>(false);
 const headerTitle = ref<string>('Domain');
 
 function refresh() {
-  console.log('Load Domain entity!');
+  console.log('FastSun > Load Domain entity!');
 
   //TODO check if not null and have a ID only
   if (props.domain_data === undefined || Object.keys(props.domain_data).length === 0) {

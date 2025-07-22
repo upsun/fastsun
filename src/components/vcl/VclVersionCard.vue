@@ -11,7 +11,7 @@ import type VclEntity from './vcl.interface';
 import ApiCache from '@/stores/localStorage';
 
 // Init
-const service_token = (new ApiCache()).getFastlyToken() || '';
+const service_token = new ApiCache().getFastlyToken() || '';
 const toast = useToast();
 const props = defineProps({
   service_id: {
@@ -26,7 +26,7 @@ const vcl_selected = ref<VclEntity>({} as VclEntity);
 const displayVclDialog = ref<boolean>(false);
 
 function refresh() {
-  console.log('Refresh Version History!');
+  console.log('FastSun > Refresh Version History!');
   const vclService = new VclAPIService(props.service_id!, service_token);
 
   vclService
@@ -57,7 +57,7 @@ function closeVclDisplayModal() {
 }
 
 function showVCL(data: VclEntity) {
-  console.log('Display VCL!');
+  console.log('FastSun > Display VCL!');
 
   const vclService = new VclAPIService(props.service_id!, service_token);
   vclService
@@ -130,13 +130,7 @@ function showVCL(data: VclEntity) {
         </Column>
         <Column :exportable="false" style="min-width: 8rem">
           <template #body="slotProps">
-            <Button
-              icon="pi pi-search"
-              outlined
-              rounded
-              class="mr-2"
-              @click="showVCL(slotProps.data)"
-            />
+            <Button icon="pi pi-search" outlined rounded class="mr-2" @click="showVCL(slotProps.data)" />
             <!-- <Button icon="pi pi-pencil" outlined rounded class="mr-2" @click="editVCL(slotProps.data)" />
                 <Button icon="pi pi-trash" v-if="false" outlined rounded severity="danger" @click="confirmDeleteVCL(slotProps.data)" /> -->
           </template>

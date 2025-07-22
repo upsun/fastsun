@@ -15,7 +15,6 @@ const fastly_id = ref(props.service_id);
 const fastly_token = ref(apiStorage.getFastlyToken() || '');
 const submitted = ref<boolean>(false);
 
-
 function closeModal(updated = false) {
   emit('update:visible', updated);
 }
@@ -24,7 +23,7 @@ function saveId() {
   submitted.value = true;
 
   if (fastly_id.value && fastly_token.value) {
-    console.log('Set ID & Token!');
+    console.log('FastSun > Set ID & Token!');
     apiStorage.setFastlyId(fastly_id.value);
     apiStorage.setFastlyToken(fastly_token.value);
 
@@ -47,7 +46,8 @@ function saveId() {
           fluid
         />
         <small v-if="submitted && !fastly_id" class="text-red-500">Fastly service ID is required.</small>
-      </div><br/>
+      </div>
+      <br />
 
       <div>
         <label for="fastly_token" class="block font-bold mb-3">Fastly Service Token</label>
@@ -61,7 +61,8 @@ function saveId() {
           fluid
         />
         <small v-if="submitted && !fastly_token" class="text-red-500">Fastly service Token is required.</small>
-      </div><br />
+      </div>
+      <br />
     </template>
     <template #footer>
       <Button label="Save" icon="pi pi-check" @click="saveId" />

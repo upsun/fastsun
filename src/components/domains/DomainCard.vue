@@ -12,7 +12,7 @@ import type DomainEntity from './domain.interface';
 import ApiCache from '@/stores/localStorage';
 
 // Init
-const service_token = (new ApiCache()).getFastlyToken() || '';
+const service_token = new ApiCache().getFastlyToken() || '';
 const toast = useToast();
 const props = defineProps({
   service_id: {
@@ -32,7 +32,7 @@ const deleteDomainDialog = ref<boolean>(false);
 const editDomainDialog = ref<boolean>(false);
 
 function refresh() {
-  console.log('Refresh Domain!');
+  console.log('FastSun > Refresh Domain!');
   const projectService = new DomainAPIService(props.service_id!, service_token);
 
   projectService
@@ -80,14 +80,14 @@ function closeDomainDeleteModal() {
 }
 
 function addDomain() {
-  console.log('Add domain!');
+  console.log('FastSun > Add domain!');
 
   cleanSelected();
   openDomainEditModal();
 }
 
 function editDomain(domain: DomainEntity) {
-  console.log('Edit domain: ' + domain.id);
+  console.log('FastSun > Edit domain: ' + domain.id);
 
   const clone = JSON.parse(JSON.stringify(domain));
   setSelected(clone);
@@ -95,7 +95,7 @@ function editDomain(domain: DomainEntity) {
 }
 
 function confirmDeleteDomain(domain: DomainEntity) {
-  console.log('Delete domain (check): ' + domain.name);
+  console.log('FastSun > Delete domain (check): ' + domain.name);
 
   setSelected(domain);
   openDomainDeleteModal();
@@ -103,7 +103,7 @@ function confirmDeleteDomain(domain: DomainEntity) {
 
 function deleteDomain() {
   if (domain_selected.value) {
-    console.log('Delete domain (make):' + domain_selected.value.name);
+    console.log('FastSun > Delete domain (make):' + domain_selected.value.name);
 
     //TODO call remove API
     domains.value = domains.value.filter((val) => val.id !== domain_selected.value!.id);
@@ -179,12 +179,7 @@ function deleteDomain() {
     @update:visible="closeDomainEditModal"
   />
 
-  <Dialog
-    v-model:visible="deleteDomainDialog"
-    :style="{ width: '450px' }"
-    header="Confirm"
-    :modal="true"
-  >
+  <Dialog v-model:visible="deleteDomainDialog" :style="{ width: '450px' }" header="Confirm" :modal="true">
     <div class="flex items-center gap-4">
       <i class="pi pi-exclamation-triangle !text-3xl" />
       <span v-if="domain_selected"

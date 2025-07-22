@@ -1,6 +1,6 @@
 {
-  "_self": "https://fastsun.plugins.pltfrm.sh/manifest.json",
-  "url": "https://fastsun.plugins.pltfrm.sh",
+  "_self": "${URL}/manifest.json",
+  "url": "${URL}",
   "format": "amd",
   "scopes": [],
   "id": "erwlgagf6enrq",

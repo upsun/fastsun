@@ -1,27 +1,26 @@
 import type UserEntity from '@/components/project/project.interface';
-import CryptoJS from "crypto-js";
+import CryptoJS from 'crypto-js';
 
 // Clean schema of local storage. (change this value if you updated the schema)
 const SCHEMA_VERSION = 1;
 
 // Keys of local storage.
-const KEY_USERS           = "fastcdn-fastly-cache-users";
-const KEY_FASTLY_ID       = "fastcdn-fastly-api-id";
-const KEY_FASTLY_TK       = "fastcdn-fastly-api-tk";
-const KEY_ADMIN_MODE      = "fastcdn-admin-mode";
-const KEY_RTAPI_ENABLE    = "fastcdn-rtapi-enable";
-const KEY_SCHEMA_VERSION  = "fastcdn-schema-version";
+const KEY_USERS = 'fastcdn-fastly-cache-users';
+const KEY_FASTLY_ID = 'fastcdn-fastly-api-id';
+const KEY_FASTLY_TK = 'fastcdn-fastly-api-tk';
+const KEY_ADMIN_MODE = 'fastcdn-admin-mode';
+const KEY_RTAPI_ENABLE = 'fastcdn-rtapi-enable';
+const KEY_SCHEMA_VERSION = 'fastcdn-schema-version';
 
 // Value of encrypt/Decrypt engine.
-const SECRET  = import.meta.env.VITE_CRYPTO_SECRET_KEY;
-const IV      = import.meta.env.VITE_CRYPTO_IV_KEY;
-const SALT    = import.meta.env.VITE_CRYPTO_SALT_KEY;
+const SECRET = import.meta.env.VITE_CRYPTO_SECRET_KEY;
+const IV = import.meta.env.VITE_CRYPTO_IV_KEY;
+const SALT = import.meta.env.VITE_CRYPTO_SALT_KEY;
 
 /**
  * Wrapper of localstorage for FastSun.
  */
 export default class LocalStore {
-
   /**
    * Check version of schema of local storage.
    * If not the same, clean all data !
@@ -40,7 +39,9 @@ export default class LocalStore {
   setUser(value: UserEntity): void {
     const users = JSON.parse(localStorage.getItem(KEY_USERS) || '[]') as Array<UserEntity>;
 
-    const finded = users.find((item) => { return item.id == value.id});
+    const finded = users.find((item) => {
+      return item.id == value.id;
+    });
     if (!finded) {
       users.push(value);
       localStorage.setItem(KEY_USERS, JSON.stringify(users));
@@ -51,9 +52,11 @@ export default class LocalStore {
    * Get Cache user from Fastly.
    * @returns User.
    */
-  getUser(id: string):  UserEntity | undefined {
+  getUser(id: string): UserEntity | undefined {
     const users = JSON.parse(localStorage.getItem(KEY_USERS) || '[]') as Array<UserEntity>;
-    const user = users.find((item) => { return item.id == id});
+    const user = users.find((item) => {
+      return item.id == id;
+    });
 
     return user;
   }
@@ -72,12 +75,17 @@ export default class LocalStore {
    */
   setFastlyToken(fastly_token: string) {
     if (fastly_token) {
-      const key = CryptoJS.PBKDF2(SECRET, SALT, { keySize: 256/32, iterations: 100 });
+      const key = CryptoJS.PBKDF2(SECRET, SALT, { keySize: 256 / 32, iterations: 100 });
       const iv = CryptoJS.enc.Utf8.parse(IV);
       const encrypted = CryptoJS.AES.encrypt(fastly_token, key, { iv: iv, mode: CryptoJS.mode.CBC });
-      const result =  encrypted.ciphertext.toString(CryptoJS.enc.Hex);
+      const result = encrypted.ciphertext.toString(CryptoJS.enc.Hex);
       localStorage.setItem(KEY_FASTLY_TK, result);
     }
+  }
+
+  resetFastly() {
+    localStorage.removeItem(KEY_FASTLY_ID);
+    localStorage.removeItem(KEY_FASTLY_TK);
   }
 
   /**
@@ -94,10 +102,13 @@ export default class LocalStore {
    */
   getFastlyToken(): string {
     const encryptValue = localStorage.getItem(KEY_FASTLY_TK) || '';
-    const key = CryptoJS.PBKDF2(SECRET, SALT, { keySize: 256/32, iterations: 100 });
+    const key = CryptoJS.PBKDF2(SECRET, SALT, { keySize: 256 / 32, iterations: 100 });
     const iv = CryptoJS.enc.Utf8.parse(IV);
     const cipher = CryptoJS.enc.Hex.parse(encryptValue);
-    const decrypted = CryptoJS.AES.decrypt({ ciphertext: cipher } as CryptoJS.lib.CipherParams, key, { iv: iv, mode: CryptoJS.mode.CBC });
+    const decrypted = CryptoJS.AES.decrypt({ ciphertext: cipher } as CryptoJS.lib.CipherParams, key, {
+      iv: iv,
+      mode: CryptoJS.mode.CBC,
+    });
     const result = decrypted.toString(CryptoJS.enc.Utf8);
     return result;
   }

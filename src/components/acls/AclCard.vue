@@ -34,7 +34,7 @@ const deleteAclDialog = ref<boolean>(false);
 const editAclDialog = ref<boolean>(false);
 
 function refresh() {
-  console.log('Refresh ACL!');
+  console.log('FastSun > Refresh ACL!');
   const aclService = new AclAPIService(props.service_id!, service_token);
 
   aclService
@@ -100,14 +100,14 @@ function closeAclDeleteModal() {
 }
 
 function addAcl() {
-  console.log('Add ACL!');
+  console.log('FastSun > Add ACL!');
 
   cleanSelected();
   openAclEditModal();
 }
 
 function editAcl(acl: AclEntity) {
-  console.log('Edit ACL: ' + acl.id);
+  console.log('FastSun > Edit ACL: ' + acl.id);
 
   const clone = JSON.parse(JSON.stringify(acl));
   setSelected(clone);
@@ -115,14 +115,14 @@ function editAcl(acl: AclEntity) {
 }
 
 function confirmDeleteAcl(acl: AclEntity) {
-  console.log('Delete ACL: (check): ' + acl.id);
+  console.log('FastSun > Delete ACL: (check): ' + acl.id);
 
   setSelected(acl);
   openAclDeleteModal();
 }
 function deleteAcl() {
   if (acl_selected.value) {
-    console.log('Delete ACL (make): ' + acl_selected.value.id);
+    console.log('FastSun > Delete ACL (make): ' + acl_selected.value.id);
 
     //TODO call remove API
     acls.value = acls.value.filter((val: AclEntity) => val.id !== acl_selected.value!.id);
@@ -186,13 +186,7 @@ function deleteAcl() {
         </Column>
         <Column :exportable="false" style="min-width: 8rem" header="Actions">
           <template #body="slotProps">
-            <Button
-              icon="pi pi-pencil"
-              outlined
-              rounded
-              class="mr-2"
-              @click="editAcl(slotProps.data)"
-            />
+            <Button icon="pi pi-pencil" outlined rounded class="mr-2" @click="editAcl(slotProps.data)" />
             <Button
               icon="pi pi-trash"
               outlined
@@ -215,12 +209,7 @@ function deleteAcl() {
     @update:visible="closeAclEditModal"
   />
 
-  <Dialog
-    v-model:visible="deleteAclDialog"
-    :style="{ width: '450px' }"
-    header="Confirm"
-    :modal="true"
-  >
+  <Dialog v-model:visible="deleteAclDialog" :style="{ width: '450px' }" header="Confirm" :modal="true">
     <div class="flex items-center gap-4">
       <i class="pi pi-exclamation-triangle !text-3xl" />
       <span v-if="acl_selected"

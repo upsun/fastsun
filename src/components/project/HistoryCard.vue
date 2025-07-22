@@ -12,7 +12,7 @@ import UserCache from '@/stores/localStorage';
 import ApiCache from '@/stores/localStorage';
 
 // Init
-const service_token = (new ApiCache()).getFastlyToken() || '';
+const service_token = new ApiCache().getFastlyToken() || '';
 const toast = useToast();
 const props = defineProps({
   service_id: {
@@ -35,7 +35,7 @@ const activities = ref<ActivityEntity[]>([]);
 
 // Or use Computed()
 function refresh() {
-  console.log('Refresh Activities History!');
+  console.log('FastSun > Refresh Activities History!');
   const projectService = new ProjectAPIService(props.service_id!, service_token);
 
   projectService

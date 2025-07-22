@@ -10,9 +10,8 @@ import PurgeAPIService from './purge.service';
 import { eventBus, EventType } from '@/utils/eventBus';
 import ApiCache from '@/stores/localStorage';
 
-
 // Init
-const service_token = (new ApiCache()).getFastlyToken() || '';
+const service_token = new ApiCache().getFastlyToken() || '';
 const emit = defineEmits(['update:visible']);
 const toast = useToast();
 const props = defineProps({
@@ -28,13 +27,18 @@ const url2purge = ref<string>('');
 
 // Events
 function purgeAll() {
-  console.log('Purge All!');
+  console.log('FastSun > Purge All!');
   const purgeService = new PurgeAPIService(props.service_id!, service_token);
 
   purgeService
     .purgeAll()
     .then(() => {
-      toast.add({ severity: 'info', summary: 'Purge All', detail: 'Process to purge all with success !\nThis will be applied in a few seconds...', life: 5000 });
+      toast.add({
+        severity: 'info',
+        summary: 'Purge All',
+        detail: 'Process to purge all with success !\nThis will be applied in a few seconds...',
+        life: 5000,
+      });
       eventBus.emit(EventType.LOG_REFRESH);
     })
     .catch((error) => {
@@ -46,17 +50,22 @@ function purgeUrl() {
   submitted.value = true;
   validated.value = true;
 
-  if (url2purge.value != ''){
-    console.log('Purge URL : ' + url2purge.value);
+  if (url2purge.value != '') {
+    console.log('FastSun > Purge URL : ' + url2purge.value);
     const purgeService = new PurgeAPIService(props.service_id!, service_token);
-    const regex = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}/gm
-    validated.value = regex.test(url2purge.value)
+    const regex = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}/gm;
+    validated.value = regex.test(url2purge.value);
 
     if (validated.value) {
       purgeService
         .purgeUrl(url2purge.value)
         .then(() => {
-          toast.add({ severity: 'info', summary: 'Purge URL', detail: 'Process to purge ' + url2purge.value + '\nThis will be applied in a few seconds...', life: 5000 });
+          toast.add({
+            severity: 'info',
+            summary: 'Purge URL',
+            detail: 'Process to purge ' + url2purge.value + '\nThis will be applied in a few seconds...',
+            life: 5000,
+          });
           eventBus.emit(EventType.LOG_REFRESH);
           closeModal();
         })
@@ -99,7 +108,7 @@ function closeModal() {
       <Message size="small" severity="secondary" variant="simple">Eg. https://domain.tld/</Message>
     </div>
     <template #footer>
-        <Button label="Purge URL" @click="purgeUrl"></Button>
-      </template>
+      <Button label="Purge URL" @click="purgeUrl"></Button>
+    </template>
   </Dialog>
 </template>
