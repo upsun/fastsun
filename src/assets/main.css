@@ -1,7 +1,7 @@
 @import './base.css';
 
 #app {
-  width: 100em;
+  width: 80rem;
   min-width: 800px;
   margin: 0 auto;
   padding: 1rem 2rem;
@@ -14,18 +14,21 @@ body {
   background-color: rgb(242, 243, 244);
 }
 
-main {
-  /* display: flex;
-    flex-wrap: wrap;
-    justify-content: space-between; */
-}
-
 .flex {
   display: flex;
 }
 
 .flex-wrap {
   flex-wrap: wrap;
+}
+
+/* Équivalences Tailwind CSS */
+.w-full {
+  width: 100%;
+}
+
+.h-\[25rem\] {
+  height: 25rem;
 }
 
 .p-card {
@@ -43,29 +46,10 @@ main {
   width: 30em;
 }
 
-/* a,
-.green {
-  text-decoration: none;
-  color: hsla(160, 100%, 37%, 1);
-  transition: 0.4s;
-  padding: 3px;
-} */
-
-/* @media (hover: hover) {
-  a:hover {
-    background-color: hsla(160, 100%, 37%, 0.2);
-  }
-} */
-
-/* @media (min-width: 1024px) {
-  body {
-    display: flex;
-    place-items: center;
-  }
-
-  #app {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    padding: 1rem 2rem;
-  }
-} */
+footer {
+  text-align: center;
+  padding: 1rem;
+  color: #646f75;
+  opacity: 0.5;
+  font-size: 11px;
+}

@@ -187,7 +187,7 @@ const verticalLinePlugin = {
  */
 const chartOptions = ref({
   responsive: true,
-  maintainAspectRatio: true,
+  maintainAspectRatio: false,
   animation: false,
   interaction: {
     mode: 'nearest',
@@ -196,12 +196,12 @@ const chartOptions = ref({
   plugins: {
     legend: {
       display: true,
-      position: 'top',
+      position: 'right',
       labels: {
         boxWidth: 12,
         padding: 10,
         font: {
-          size: 11,
+          size: 13,
         },
         usePointStyle: true,
         pointStyle: 'rect',
@@ -364,6 +364,7 @@ function getNextStat() {
     .then((result) => {
       if (result.Data.length > 0) {
         const chart = chartInstance.value.chart;
+        // Force chart to resize to container
         chart.resize();
 
         // Slice old values to maintain maximum sample count
@@ -436,7 +437,7 @@ function getNextStat() {
         :data="chartData"
         :options="chartOptions"
         :plugins="[verticalLinePlugin]"
-        class="w-full h-[20rem]"
+        class="w-full h-[25rem] chart-container"
       />
     </template>
   </Card>
