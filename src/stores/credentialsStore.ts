@@ -19,7 +19,7 @@ class CredentialsStore {
   });
 
   readonly vclVersionIsDefined = computed(() => {
-    return this._vclVersion.value >= 1;
+    return this._vclVersion.value > 0;
   });
 
   readonly isAdmin = computed(() => {

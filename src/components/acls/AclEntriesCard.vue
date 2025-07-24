@@ -29,12 +29,6 @@ const props = defineProps({
     type: Boolean,
     resuired: true,
   },
-  is_admin: {
-    type: Boolean,
-    default() {
-      return true;
-    },
-  },
 });
 
 // Data
@@ -174,7 +168,6 @@ const displayEntries = computed(() => {
         v-model.trim="acl_data!.name"
         required="true"
         autofocus
-        :disabled="!is_admin"
         :invalid="submitted && !acl_data!.name"
         fluid
       />

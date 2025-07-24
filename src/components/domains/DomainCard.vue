@@ -10,7 +10,6 @@ import DomainEntryCard from './DomainEntryCard.vue';
 import DomainAPIService from './domain.service';
 import { useCredentialsStore } from '@/stores/credentialsStore';
 import type DomainEntity from './domain.interface';
-import ApiCache from '@/stores/localStorage';
 
 /**
  * SECURITY: Uses centralized credentials store instead of props to avoid token exposure

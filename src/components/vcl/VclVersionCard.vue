@@ -9,11 +9,6 @@ import DisplayVclCard from './VclDisplayCard.vue';
 import VclAPIService from './vcl.service';
 import { useCredentialsStore } from '@/stores/credentialsStore';
 import type VclEntity from './vcl.interface';
-import ApiCache from '@/stores/localStorage';
-
-/**
- * SECURITY: Uses centralized credentials store instead of props to avoid token exposure
- */
 
 // Init
 const toast = useToast();

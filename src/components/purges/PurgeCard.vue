@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, type Ref } from 'vue';
+import { ref } from 'vue';
 import { useToast } from 'primevue/usetoast';
 import Button from 'primevue/button';
 import Dialog from 'primevue/dialog';
@@ -9,16 +9,12 @@ import Message from 'primevue/message';
 import PurgeAPIService from './purge.service';
 import { useCredentialsStore } from '@/stores/credentialsStore';
 import { eventBus, EventType } from '@/utils/eventBus';
-import ApiCache from '@/stores/localStorage';
-
-/**
- * SECURITY: Uses centralized credentials store instead of props to avoid token exposure
- */
 
 // Init
 const emit = defineEmits(['update:visible']);
 const toast = useToast();
 const credentialsStore = useCredentialsStore();
+
 const submitted = ref<boolean>(false);
 const validated = ref<boolean>(true);
 const purgeUrlDialog = ref<boolean>(false);

@@ -6,18 +6,8 @@ import type { Chart as ChartJS, ChartEvent } from 'chart.js';
 import ProjectAPIService from './project.service';
 import { useCredentialsStore } from '@/stores/credentialsStore';
 import 'chartjs-adapter-date-fns';
-import LocalStore from '@/stores/localStorage';
-
-/**
- * Real-time statistics card component for displaying Fastly service metrics.
- * Shows various performance metrics including requests, hits, misses, errors, and calculated ratios.
- * Data is automatically updated every second and displayed in a time-series chart.
- *
- * SECURITY: Uses centralized credentials store instead of props to avoid token exposure
- */
 
 // Initialize dependencies and constants
-const localStore = new LocalStore();
 const credentialsStore = useCredentialsStore();
 /** Maximum number of data points to display in the chart */
 const sampleCount = 60;
@@ -33,11 +23,6 @@ const timer = ref();
 const lock = ref<boolean>(false);
 /** Reference to the Chart component instance */
 const chartInstance = ref();
-
-/**
- * Check if credentials are available before making API calls
- */
-const canMakeApiCalls = computed(() => credentialsStore.serviceIsDefined);
 
 /**
  * Common dataset configuration options for all chart datasets

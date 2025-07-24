@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, toRaw, watchEffect } from 'vue';
+import { ref, toRaw, watchEffect } from 'vue';
 import { useToast } from 'primevue/usetoast';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
@@ -12,14 +12,12 @@ import AclAPIService from './acl.service';
 import { useCredentialsStore } from '@/stores/credentialsStore';
 import type AclEntity from './acl.interface';
 import type AclItemEntity from './acl.interface';
-import LocalStore from '@/stores/localStorage';
 
 /**
  * SECURITY: Uses centralized credentials store instead of props to avoid token exposure
  */
 
 // Init
-const localStore = new LocalStore();
 const toast = useToast();
 const credentialsStore = useCredentialsStore();
 const props = defineProps({
@@ -68,10 +66,6 @@ function refresh() {
     });
 }
 watchEffect(refresh);
-
-const isAdmin = computed(() => {
-  return localStore.isAdminMode();
-});
 
 // Events
 function cleanSelected() {
@@ -168,7 +162,6 @@ function deleteAcl() {
               size="small"
               class="mr-2"
               style="margin-left: auto"
-              v-if="isAdmin"
               @click="addAcl()"
             />
           </div>
@@ -189,14 +182,7 @@ function deleteAcl() {
         <Column :exportable="false" style="min-width: 8rem" header="Actions">
           <template #body="slotProps">
             <Button icon="pi pi-pencil" outlined rounded class="mr-2" @click="editAcl(slotProps.data)" />
-            <Button
-              icon="pi pi-trash"
-              outlined
-              rounded
-              severity="danger"
-              v-if="isAdmin"
-              @click="confirmDeleteAcl(slotProps.data)"
-            />
+            <Button icon="pi pi-trash" outlined rounded severity="danger" @click="confirmDeleteAcl(slotProps.data)" />
           </template>
         </Column>
       </DataTable>
@@ -207,7 +193,6 @@ function deleteAcl() {
     v-if="editAclDialog"
     :acl_data="acl_selected"
     :acl_state_dialog="editAclDialog"
-    :is_admin="isAdmin"
     @update:visible="closeAclEditModal"
   />
 

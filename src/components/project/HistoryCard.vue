@@ -10,11 +10,6 @@ import { eventBus, EventType } from '@/utils/eventBus';
 
 import type ActivityEntity from './project.interface';
 import UserCache from '@/stores/localStorage';
-import ApiCache from '@/stores/localStorage';
-
-/**
- * SECURITY: Uses centralized credentials store instead of props to avoid token exposure
- */
 
 // Init
 const toast = useToast();

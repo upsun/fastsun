@@ -41,10 +41,8 @@ function logout() {
   console.log('FastSun > Logout for project:', props.project_id, 'environment:', props.environment_id);
   apiStorage.resetFastly(props.project_id, props.environment_id);
 
-  // Recharger entièrement l'application dans le contexte iframe
   emit('update:visible', 'reload');
 }
-// Data
 </script>
 
 <template>
