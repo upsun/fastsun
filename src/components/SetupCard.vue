@@ -56,8 +56,14 @@ function saveId() {
 </script>
 <template>
   <Card>
-    <template #title v-if="false">Domain Information</template>
+    <template #title>Setup Fastly Credentials</template>
     <template #content>
+      <div class="setupcard-explanation text-sm text-gray-700">
+        Your Fastly credentials are securely stored only in your browser (not on upsun).<br />This approach is more
+        secure because your credentials are never shared with any third parties, reducing the risk of unauthorized
+        access.<br />If you use a different browser or device, you will need to re-enter your credentials.
+      </div>
+
       <div>
         <label for="fastly_id" class="block font-bold mb-3">Fastly Service ID</label>
         <InputText

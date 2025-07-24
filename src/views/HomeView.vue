@@ -23,7 +23,6 @@ const toast = useToast();
 
 // Initialize Plugin SDK
 const { sdk } = usePluginSDK();
-
 const project_detail = ref<ProjectEntity>({} as ProjectEntity);
 
 function refresh() {

@@ -210,3 +210,12 @@ footer {
   transform: translateY(-1px);
   box-shadow: 0 2px 4px rgba(55, 48, 163, 0.2);
 }
+
+.setupcard-explanation {
+  margin-bottom: 24px;
+  background: #fffbe6;
+  border: 1px solid #ffe58f;
+  color: #ad6800;
+  padding: 14px 18px;
+  border-radius: 6px;
+}
