@@ -1,26 +1,26 @@
 <script setup lang="ts">
-import { computed, ref, toRaw, watchEffect } from 'vue';
+import { ref, toRaw, watchEffect } from 'vue';
 import { useToast } from 'primevue/usetoast';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import Dialog from 'primevue/dialog';
 import Button from 'primevue/button';
+import Card from 'primevue/card';
 
 import AclEntriesCard from './AclEntriesCard.vue';
 import AclAPIService from './acl.service';
+import { useCredentialsStore } from '@/stores/credentialsStore';
 import type AclEntity from './acl.interface';
 import type AclItemEntity from './acl.interface';
-import LocalStore from '@/stores/localStorage';
+
+/**
+ * SECURITY: Uses centralized credentials store instead of props to avoid token exposure
+ */
 
 // Init
-const localStore = new LocalStore();
-const service_token = localStore.getFastlyToken() || '';
 const toast = useToast();
+const credentialsStore = useCredentialsStore();
 const props = defineProps({
-  service_id: {
-    type: String,
-    required: true,
-  },
   vcl_version: {
     type: Number,
     required: true,
@@ -34,8 +34,8 @@ const deleteAclDialog = ref<boolean>(false);
 const editAclDialog = ref<boolean>(false);
 
 function refresh() {
-  console.log('Refresh ACL!');
-  const aclService = new AclAPIService(props.service_id!, service_token);
+  console.log('FastSun > Refresh ACL!');
+  const aclService = new AclAPIService(credentialsStore.getServiceId(), credentialsStore.getServiceToken());
 
   aclService
     .getACL(props.vcl_version!)
@@ -67,10 +67,6 @@ function refresh() {
 }
 watchEffect(refresh);
 
-const isAdmin = computed(() => {
-  return localStore.isAdminMode();
-});
-
 // Events
 function cleanSelected() {
   acl_selected.value = {} as AclEntity;
@@ -100,14 +96,14 @@ function closeAclDeleteModal() {
 }
 
 function addAcl() {
-  console.log('Add ACL!');
+  console.log('FastSun > Add ACL!');
 
   cleanSelected();
   openAclEditModal();
 }
 
 function editAcl(acl: AclEntity) {
-  console.log('Edit ACL: ' + acl.id);
+  console.log('FastSun > Edit ACL: ' + acl.id);
 
   const clone = JSON.parse(JSON.stringify(acl));
   setSelected(clone);
@@ -115,14 +111,14 @@ function editAcl(acl: AclEntity) {
 }
 
 function confirmDeleteAcl(acl: AclEntity) {
-  console.log('Delete ACL: (check): ' + acl.id);
+  console.log('FastSun > Delete ACL: (check): ' + acl.id);
 
   setSelected(acl);
   openAclDeleteModal();
 }
 function deleteAcl() {
   if (acl_selected.value) {
-    console.log('Delete ACL (make): ' + acl_selected.value.id);
+    console.log('FastSun > Delete ACL (make): ' + acl_selected.value.id);
 
     //TODO call remove API
     acls.value = acls.value.filter((val: AclEntity) => val.id !== acl_selected.value!.id);
@@ -166,7 +162,6 @@ function deleteAcl() {
               size="small"
               class="mr-2"
               style="margin-left: auto"
-              v-if="isAdmin"
               @click="addAcl()"
             />
           </div>
@@ -186,21 +181,8 @@ function deleteAcl() {
         </Column>
         <Column :exportable="false" style="min-width: 8rem" header="Actions">
           <template #body="slotProps">
-            <Button
-              icon="pi pi-pencil"
-              outlined
-              rounded
-              class="mr-2"
-              @click="editAcl(slotProps.data)"
-            />
-            <Button
-              icon="pi pi-trash"
-              outlined
-              rounded
-              severity="danger"
-              v-if="isAdmin"
-              @click="confirmDeleteAcl(slotProps.data)"
-            />
+            <Button icon="pi pi-pencil" outlined rounded class="mr-2" @click="editAcl(slotProps.data)" />
+            <Button icon="pi pi-trash" outlined rounded severity="danger" @click="confirmDeleteAcl(slotProps.data)" />
           </template>
         </Column>
       </DataTable>
@@ -211,16 +193,10 @@ function deleteAcl() {
     v-if="editAclDialog"
     :acl_data="acl_selected"
     :acl_state_dialog="editAclDialog"
-    :is_admin="isAdmin"
     @update:visible="closeAclEditModal"
   />
 
-  <Dialog
-    v-model:visible="deleteAclDialog"
-    :style="{ width: '450px' }"
-    header="Confirm"
-    :modal="true"
-  >
+  <Dialog v-model:visible="deleteAclDialog" :style="{ width: '450px' }" header="Confirm" :modal="true">
     <div class="flex items-center gap-4">
       <i class="pi pi-exclamation-triangle !text-3xl" />
       <span v-if="acl_selected"

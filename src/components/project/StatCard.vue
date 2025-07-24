@@ -2,35 +2,17 @@
 import { ref, onBeforeUnmount, onMounted, computed } from 'vue';
 import { useToast } from 'primevue/usetoast';
 import Chart from 'primevue/chart';
+import type { Chart as ChartJS, ChartEvent } from 'chart.js';
 import ProjectAPIService from './project.service';
+import { useCredentialsStore } from '@/stores/credentialsStore';
 import 'chartjs-adapter-date-fns';
-import LocalStore from '@/stores/localStorage';
-
-/**
- * Real-time statistics card component for displaying Fastly service metrics.
- * Shows various performance metrics including requests, hits, misses, errors, and calculated ratios.
- * Data is automatically updated every second and displayed in a time-series chart.
- */
 
 // Initialize dependencies and constants
-const localStore = new LocalStore();
-/** Service token retrieved from local storage for API authentication */
-const service_token = localStore.getFastlyToken() || '';
+const credentialsStore = useCredentialsStore();
 /** Maximum number of data points to display in the chart */
 const sampleCount = 60;
 /** Toast notification service for displaying errors */
 const toast = useToast();
-
-/**
- * Component props definition
- * @property {string} service_id - The Fastly service ID to monitor
- */
-const props = defineProps({
-  service_id: {
-    type: String,
-    required: true,
-  },
-});
 
 /**
  * Reactive references for component state management
@@ -140,13 +122,10 @@ const chartData = {
  */
 const verticalLinePlugin = {
   id: 'cursorLine',
-
   /**
    * Event handler for tracking cursor position
-   * @param {unknown} chart - The Chart.js instance
-   * @param {unknown} args - Event arguments containing cursor position
    */
-  afterEvent(chart, args) {
+  afterEvent(chart: ChartJS, args: { event: ChartEvent & { x: number } }) {
     const {
       ctx,
       chartArea: { top, bottom },
@@ -155,20 +134,21 @@ const verticalLinePlugin = {
     const event = args.event;
 
     if (event.x >= x.left && event.x <= x.right) {
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
       chart._cursorX = event.x;
     }
   },
 
   /**
    * Draws the vertical cursor line on the chart
-   * @param {unknown} chart - The Chart.js instance
    */
-  afterDraw(chart) {
+  afterDraw(chart: ChartJS) {
     const {
       ctx,
       chartArea: { top, bottom },
       _cursorX,
-    } = chart;
+    } = chart as ChartJS & { _cursorX?: number };
     if (_cursorX) {
       ctx.save();
       ctx.beginPath();
@@ -188,7 +168,7 @@ const verticalLinePlugin = {
  */
 const chartOptions = ref({
   responsive: true,
-  maintainAspectRatio: true,
+  maintainAspectRatio: false,
   animation: false,
   interaction: {
     mode: 'nearest',
@@ -197,12 +177,12 @@ const chartOptions = ref({
   plugins: {
     legend: {
       display: true,
-      position: 'top',
+      position: 'right',
       labels: {
         boxWidth: 12,
         padding: 10,
         font: {
-          size: 11,
+          size: 13,
         },
         usePointStyle: true,
         pointStyle: 'rect',
@@ -358,13 +338,14 @@ function startData() {
  */
 function getNextStat() {
   lock.value = true;
-  const projectService = new ProjectAPIService(props.service_id!, service_token);
+  const projectService = new ProjectAPIService(credentialsStore.getServiceId(), credentialsStore.getServiceToken());
 
   projectService
     .getStat()
     .then((result) => {
       if (result.Data.length > 0) {
         const chart = chartInstance.value.chart;
+        // Force chart to resize to container
         chart.resize();
 
         // Slice old values to maintain maximum sample count
@@ -437,7 +418,7 @@ function getNextStat() {
         :data="chartData"
         :options="chartOptions"
         :plugins="[verticalLinePlugin]"
-        class="w-full h-[20rem]"
+        class="w-full h-[25rem] chart-container"
       />
     </template>
   </Card>

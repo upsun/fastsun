@@ -1,74 +1,143 @@
 <script setup lang="ts">
-import { computed, ref, toRaw, watchEffect } from 'vue';
+import { ref, toRaw, watchEffect, onMounted, onUnmounted, computed } from 'vue';
 import { useToast } from 'primevue/usetoast';
-import SetuCard from '@/components/SetupCard.vue';
+
+import SetupCard from '@/components/SetupCard.vue';
 import AclsCard from '@/components/acls/AclCard.vue';
 import DomaCard from '@/components/domains/DomainCard.vue';
 import HistCard from '@/components/project/HistoryCard.vue';
 import InfoCard from '@/components/project/InfoCard.vue';
 import StatCard from '@/components/project/StatCard.vue';
 import VersCard from '@/components/vcl/VclVersionCard.vue';
+
 import LocalStore from '@/stores/localStorage';
+import { useCredentialsStore } from '@/stores/credentialsStore';
+import { usePluginSDK, PLUGIN_SRV_PROPS, PLUGIN_TOPIC_VIEW_LOADED } from '@/utils/pluginSDK';
 
 import ProjectAPIService from '@/components/project/project.service';
 import type ProjectEntity from '@/components/project/project.interface';
 
 const localStore = new LocalStore();
-const service_id = ref(localStore.getFastlyId());
-const service_token = ref(localStore.getFastlyToken() || '');
+const credentialsStore = useCredentialsStore();
 const toast = useToast();
 
-// TODO get current version HERE !
-const vcl_version = ref(-1);
+// Initialize Plugin SDK
+const { sdk } = usePluginSDK();
 const project_detail = ref<ProjectEntity>({} as ProjectEntity);
 
-const serviceIsDefined = computed(() => {
-  return service_id.value != '' && service_token.value != '';
-});
-const vclVersIsDefined = computed(() => {
-  return vcl_version.value >= 1;
-});
-
-const isAdmin = computed(() => {
-  return localStore.isAdminMode();
-});
-
 function refresh() {
-  if (service_id.value != "" && service_token.value != '') {
-    console.log('Refresh Project Detail!');
+  const serviceId = credentialsStore.getServiceId();
+  const serviceToken = credentialsStore.getServiceToken();
+  if (!serviceId || !serviceToken) return;
+  console.log('FastSun > Refresh Project Detail!');
 
-    const projectService = new ProjectAPIService(service_id.value, service_token.value);
-    projectService
-      .getProject()
-      .then((result) => {
-        project_detail.value = result;
-        vcl_version.value = result.active_version.number; // Can be refactor with project_detail.
-
-        if (import.meta.env.DEV) {
-          console.log(toRaw(project_detail.value));
-        }
-      })
-      .catch((error) => {
-        toast.add({ severity: 'error', summary: 'Error', detail: error, life: 5000 });
-      });
-  }
+  const projectService = new ProjectAPIService(serviceId, serviceToken);
+  projectService
+    .getProject()
+    .then((result) => {
+      project_detail.value = result;
+      credentialsStore.setVclVersion(result.active_version.number);
+      if (import.meta.env.DEV) {
+        console.log(toRaw(project_detail.value));
+      }
+    })
+    .catch((error) => {
+      toast.add({ severity: 'error', summary: 'Error', detail: error, life: 5000 });
+    });
 }
 watchEffect(refresh);
 
 function reload() {
-  service_id.value = localStore.getFastlyId() || '';
-  service_token.value = localStore.getFastlyToken() || '';
+  credentialsStore.loadCredentials();
 }
+
+function handleSetupCredentialsSaved(event: {
+  projectId: string;
+  environmentId: string;
+  fastlyId: string;
+  fastlyToken: string;
+}) {
+  credentialsStore.setCredentials(event.fastlyId, event.fastlyToken);
+}
+
+function handleInfoCardUpdate(event: string) {
+  if (event === 'reload') {
+    credentialsStore.clearCredentials();
+    project_detail.value = {} as ProjectEntity;
+    reload();
+  } else if (event === 'save') {
+    credentialsStore.saveCredentials();
+  }
+}
+
+let subViewLoaded: ReturnType<typeof sdk.createSubscription> | null = null;
+
+interface ProjectProps {
+  projectId: string;
+  environmentId: string;
+}
+
+onMounted(async () => {
+  localStore.checkSchemaVersion();
+
+  const cltProps = sdk.createClient(PLUGIN_SRV_PROPS);
+  const props = (await cltProps.sendRequest(1, '*')) as ProjectProps | null;
+  if (!props) {
+    credentialsStore.setProjectInfo('default', 'default');
+  } else {
+    credentialsStore.setProjectInfo(props.projectId, props.environmentId);
+  }
+  cltProps.destroy();
+  credentialsStore.loadCredentials();
+
+  // Debug
+  console.log('FastSun > Test > Service ID:', credentialsStore.getServiceId());
+  console.log('FastSun > Test > Service Defined:', credentialsStore.serviceIsDefined);
+  console.log('FastSun > Test > Project ID:', credentialsStore.getProjectId());
+  console.log('FastSun > Test > Environment ID:', credentialsStore.getEnvironmentId());
+
+  subViewLoaded = sdk.createSubscription(PLUGIN_TOPIC_VIEW_LOADED, (data) => {
+    console.log('FastSun > Test > Received View Loaded:', data);
+  });
+  const pubLoaded = sdk.createPublisher(PLUGIN_TOPIC_VIEW_LOADED);
+  pubLoaded.publish({ view: 'HomeView', timestamp: new Date().toISOString() });
+  pubLoaded.destroy();
+});
+
+onUnmounted(() => {
+  if (subViewLoaded) subViewLoaded.destroy();
+});
+
+const hasFastlyCredentials = computed(() => credentialsStore.getServiceId() && credentialsStore.getServiceToken());
+const vclVersionIsDefined = computed(() => credentialsStore.vclVersionIsDefined.value);
 </script>
 
 <template>
   <main>
-    <SetuCard :service_id="service_id" v-if="!serviceIsDefined" @update:visible="reload" />
-    <InfoCard :service_id="service_id" :vcl_version="vcl_version" v-if="serviceIsDefined && vclVersIsDefined" :project_detail="project_detail"/>
-    <StatCard :service_id="service_id" v-if="serviceIsDefined" />
-    <DomaCard :service_id="service_id" :vcl_version="vcl_version" v-if="serviceIsDefined && vclVersIsDefined && isAdmin" />
-    <VersCard :service_id="service_id" v-if="serviceIsDefined && isAdmin" />
-    <HistCard :service_id="service_id" v-if="serviceIsDefined" />
-    <AclsCard :service_id="service_id" :vcl_version="vcl_version" v-if="serviceIsDefined && vclVersIsDefined" />
+    <div v-if="!hasFastlyCredentials">
+      <SetupCard
+        :service_id="credentialsStore.getServiceId() || ''"
+        :project_id="credentialsStore.getProjectId() || 'default'"
+        :environment_id="credentialsStore.getEnvironmentId() || 'default'"
+        @update:visible="reload"
+        @credentials:saved="handleSetupCredentialsSaved"
+      />
+    </div>
+    <div v-else-if="vclVersionIsDefined">
+      <InfoCard
+        :service_id="credentialsStore.getServiceId()"
+        :service_token="credentialsStore.getServiceToken()"
+        :vcl_version="credentialsStore.getVclVersion()"
+        :project_id="credentialsStore.getProjectId()"
+        :environment_id="credentialsStore.getEnvironmentId()"
+        :project_detail="project_detail"
+        @update:visible="handleInfoCardUpdate"
+      />
+      <StatCard />
+      <DomaCard :vcl_version="credentialsStore.getVclVersion()" />
+      <VersCard />
+      <HistCard />
+      <AclsCard :vcl_version="credentialsStore.getVclVersion()" />
+    </div>
   </main>
 </template>
