@@ -131,6 +131,7 @@ export class Client {
     this.node.clients.push(this);
 
     this.pubSrv = this.node.createPublisher(`${this.topic}_REQ`);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     this.subSrv = this.node.createSubscription(`${this.topic}_RES`, (response: any) => {
       const reqId = response?.reqId;
 
