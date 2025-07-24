@@ -7,18 +7,19 @@ import Button from 'primevue/button';
 
 import DisplayVclCard from './VclDisplayCard.vue';
 import VclAPIService from './vcl.service';
+import { useCredentialsStore } from '@/stores/credentialsStore';
 import type VclEntity from './vcl.interface';
 import ApiCache from '@/stores/localStorage';
 
+/**
+ * SECURITY: Uses centralized credentials store instead of props to avoid token exposure
+ */
+
 // Init
-const service_token = new ApiCache().getFastlyToken() || '';
 const toast = useToast();
-const props = defineProps({
-  service_id: {
-    type: String,
-    required: true,
-  },
-});
+const credentialsStore = useCredentialsStore();
+
+// No props needed for service credentials anymore
 
 // Data
 const versions = ref<VclEntity[]>([]);
@@ -27,7 +28,7 @@ const displayVclDialog = ref<boolean>(false);
 
 function refresh() {
   console.log('FastSun > Refresh Version History!');
-  const vclService = new VclAPIService(props.service_id!, service_token);
+  const vclService = new VclAPIService(credentialsStore.getServiceId(), credentialsStore.getServiceToken());
 
   vclService
     .getVersions()
@@ -59,7 +60,7 @@ function closeVclDisplayModal() {
 function showVCL(data: VclEntity) {
   console.log('FastSun > Display VCL!');
 
-  const vclService = new VclAPIService(props.service_id!, service_token);
+  const vclService = new VclAPIService(credentialsStore.getServiceId(), credentialsStore.getServiceToken());
   vclService
     .getVCL(data.number)
     .then((result) => {

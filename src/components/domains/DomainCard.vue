@@ -8,17 +8,18 @@ import Button from 'primevue/button';
 
 import DomainEntryCard from './DomainEntryCard.vue';
 import DomainAPIService from './domain.service';
+import { useCredentialsStore } from '@/stores/credentialsStore';
 import type DomainEntity from './domain.interface';
 import ApiCache from '@/stores/localStorage';
 
+/**
+ * SECURITY: Uses centralized credentials store instead of props to avoid token exposure
+ */
+
 // Init
-const service_token = new ApiCache().getFastlyToken() || '';
 const toast = useToast();
+const credentialsStore = useCredentialsStore();
 const props = defineProps({
-  service_id: {
-    type: String,
-    resuired: true,
-  },
   vcl_version: {
     type: Number,
     required: true,
@@ -33,7 +34,7 @@ const editDomainDialog = ref<boolean>(false);
 
 function refresh() {
   console.log('FastSun > Refresh Domain!');
-  const projectService = new DomainAPIService(props.service_id!, service_token);
+  const projectService = new DomainAPIService(credentialsStore.getServiceId(), credentialsStore.getServiceToken());
 
   projectService
     .getDomains(props.vcl_version!)

@@ -5,22 +5,24 @@ import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import Dialog from 'primevue/dialog';
 import Button from 'primevue/button';
+import Card from 'primevue/card';
 
 import AclEntriesCard from './AclEntriesCard.vue';
 import AclAPIService from './acl.service';
+import { useCredentialsStore } from '@/stores/credentialsStore';
 import type AclEntity from './acl.interface';
 import type AclItemEntity from './acl.interface';
 import LocalStore from '@/stores/localStorage';
 
+/**
+ * SECURITY: Uses centralized credentials store instead of props to avoid token exposure
+ */
+
 // Init
 const localStore = new LocalStore();
-const service_token = localStore.getFastlyToken() || '';
 const toast = useToast();
+const credentialsStore = useCredentialsStore();
 const props = defineProps({
-  service_id: {
-    type: String,
-    required: true,
-  },
   vcl_version: {
     type: Number,
     required: true,
@@ -35,7 +37,7 @@ const editAclDialog = ref<boolean>(false);
 
 function refresh() {
   console.log('FastSun > Refresh ACL!');
-  const aclService = new AclAPIService(props.service_id!, service_token);
+  const aclService = new AclAPIService(credentialsStore.getServiceId(), credentialsStore.getServiceToken());
 
   aclService
     .getACL(props.vcl_version!)

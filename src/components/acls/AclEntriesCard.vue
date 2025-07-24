@@ -9,11 +9,17 @@ import InputText from 'primevue/inputtext';
 import type AclEntity from './acl.interface';
 import type AclItemEntity from './acl.interface';
 import AclAPIService from './acl.service';
+import { useCredentialsStore } from '@/stores/credentialsStore';
 import LocalStore from '@/stores/localStorage';
+
+/**
+ * SECURITY: Uses centralized credentials store instead of props to avoid token exposure
+ */
 
 // Init
 const emit = defineEmits(['update:visible']);
 const toast = useToast();
+const credentialsStore = useCredentialsStore();
 const props = defineProps({
   acl_data: {
     type: Object as PropType<AclEntity>,
@@ -41,7 +47,6 @@ const editingRows = ref([]);
 const idCounter = ref<number>(-1);
 
 const localStore = new LocalStore();
-const service_token = localStore.getFastlyToken() || '';
 function refresh() {
   console.log('FastSun > Load ACL: ' + props.acl_data!.id);
 
@@ -97,7 +102,7 @@ function saveACL() {
 
   // Call API for entry https://www.fastly.com/documentation/reference/api/acls/acl-entry/#bulk-update-acl-entries
   if (updated.length > 0) {
-    const aclApi = new AclAPIService(props.acl_data!.service_id, service_token);
+    const aclApi = new AclAPIService(props.acl_data!.service_id, credentialsStore.getServiceToken());
 
     aclApi
       .updateAclEntry(props.acl_data!.id, toRaw(updated))

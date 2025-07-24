@@ -9,11 +9,27 @@ const props = defineProps({
     type: String,
     required: true,
   },
+  project_id: {
+    type: String,
+    required: false,
+    default: 'default',
+  },
+  environment_id: {
+    type: String,
+    required: false,
+    default: 'default',
+  },
 });
-const emit = defineEmits(['update:visible']);
+const emit = defineEmits(['update:visible', 'credentials:saved']);
 const fastly_id = ref(props.service_id);
-const fastly_token = ref(apiStorage.getFastlyToken() || '');
+const fastly_token = ref('');
 const submitted = ref<boolean>(false);
+
+// Load existing token for this project and environment
+const existingCredentials = apiStorage.getFastlyCredentials(props.project_id, props.environment_id);
+if (existingCredentials) {
+  fastly_token.value = existingCredentials.fastlyToken;
+}
 
 function closeModal(updated = false) {
   emit('update:visible', updated);
@@ -23,9 +39,16 @@ function saveId() {
   submitted.value = true;
 
   if (fastly_id.value && fastly_token.value) {
-    console.log('FastSun > Set ID & Token!');
-    apiStorage.setFastlyId(fastly_id.value);
-    apiStorage.setFastlyToken(fastly_token.value);
+    console.log('FastSun > Set ID & Token for project:', props.project_id, 'environment:', props.environment_id);
+    apiStorage.setFastlyCredentials(props.project_id, props.environment_id, fastly_id.value, fastly_token.value);
+
+    // Emit the saved credentials to parent component
+    emit('credentials:saved', {
+      projectId: props.project_id,
+      environmentId: props.environment_id,
+      fastlyId: fastly_id.value,
+      fastlyToken: fastly_token.value,
+    });
 
     closeModal(true);
   }

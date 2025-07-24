@@ -7,19 +7,18 @@ import InputText from 'primevue/inputtext';
 import Message from 'primevue/message';
 
 import PurgeAPIService from './purge.service';
+import { useCredentialsStore } from '@/stores/credentialsStore';
 import { eventBus, EventType } from '@/utils/eventBus';
 import ApiCache from '@/stores/localStorage';
 
+/**
+ * SECURITY: Uses centralized credentials store instead of props to avoid token exposure
+ */
+
 // Init
-const service_token = new ApiCache().getFastlyToken() || '';
 const emit = defineEmits(['update:visible']);
 const toast = useToast();
-const props = defineProps({
-  service_id: {
-    type: String,
-    required: true,
-  },
-});
+const credentialsStore = useCredentialsStore();
 const submitted = ref<boolean>(false);
 const validated = ref<boolean>(true);
 const purgeUrlDialog = ref<boolean>(false);
@@ -28,7 +27,7 @@ const url2purge = ref<string>('');
 // Events
 function purgeAll() {
   console.log('FastSun > Purge All!');
-  const purgeService = new PurgeAPIService(props.service_id!, service_token);
+  const purgeService = new PurgeAPIService(credentialsStore.getServiceId(), credentialsStore.getServiceToken());
 
   purgeService
     .purgeAll()
@@ -52,7 +51,7 @@ function purgeUrl() {
 
   if (url2purge.value != '') {
     console.log('FastSun > Purge URL : ' + url2purge.value);
-    const purgeService = new PurgeAPIService(props.service_id!, service_token);
+    const purgeService = new PurgeAPIService(credentialsStore.getServiceId(), credentialsStore.getServiceToken());
     const regex = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}/gm;
     validated.value = regex.test(url2purge.value);
 
@@ -82,8 +81,21 @@ function closeModal() {
 </script>
 
 <template>
-  <Button label="Purge All" @click="purgeAll()"></Button>
-  <Button label="Purge URL" @click="purgeUrlDialog = true"></Button>
+  <div class="purge-actions">
+    <div class="purge-section">
+      <span class="info-label">Cache Management</span>
+      <div class="purge-buttons">
+        <button class="purge-btn purge-btn-primary" @click="purgeAll()">
+          <span class="purge-btn-icon">🗑️</span>
+          Purge All
+        </button>
+        <button class="purge-btn purge-btn-secondary" @click="purgeUrlDialog = true">
+          <span class="purge-btn-icon">🔗</span>
+          Purge URL
+        </button>
+      </div>
+    </div>
+  </div>
 
   <Dialog
     v-bind:visible="purgeUrlDialog"

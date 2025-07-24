@@ -5,21 +5,20 @@ import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import Button from 'primevue/button';
 import ProjectAPIService from './project.service';
+import { useCredentialsStore } from '@/stores/credentialsStore';
 import { eventBus, EventType } from '@/utils/eventBus';
 
 import type ActivityEntity from './project.interface';
 import UserCache from '@/stores/localStorage';
 import ApiCache from '@/stores/localStorage';
 
+/**
+ * SECURITY: Uses centralized credentials store instead of props to avoid token exposure
+ */
+
 // Init
-const service_token = new ApiCache().getFastlyToken() || '';
 const toast = useToast();
-const props = defineProps({
-  service_id: {
-    type: String,
-    required: true,
-  },
-});
+const credentialsStore = useCredentialsStore();
 const cache = new UserCache();
 
 onMounted(() => {
@@ -36,7 +35,7 @@ const activities = ref<ActivityEntity[]>([]);
 // Or use Computed()
 function refresh() {
   console.log('FastSun > Refresh Activities History!');
-  const projectService = new ProjectAPIService(props.service_id!, service_token);
+  const projectService = new ProjectAPIService(credentialsStore.getServiceId(), credentialsStore.getServiceToken());
 
   projectService
     .getActivities()

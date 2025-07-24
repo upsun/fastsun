@@ -94,7 +94,7 @@ export class Subscription {
    * Unsubscribe (destroy) this subscription and remove it from the list
    */
   public destroy(): void {
-    console.log(`SDK > Bus > Unsubscribe from topic: ${this.topic}`);
+    console.log(`SDK > Bus > Unsubscribe and destroy of topic: ${this.topic}`);
     const index = this.node.subscriptions.indexOf(this);
     if (index > -1) {
       this.node.subscriptions.splice(index, 1);
@@ -116,13 +116,31 @@ export class Subscription {
   }
 }
 
-export class Service {}
+export class Service {
+  destroy() {
+    throw new Error('Method not implemented.');
+  }
+}
 
+/**
+ * Client class for sending requests to a service and receiving responses
+ * This class allows plugins to communicate with services by sending requests
+ * and receiving responses asynchronously.
+ * It manages request IDs to match requests with their corresponding responses.
+ */
 export class Client {
   private pubSrv: Publisher;
   public subSrv: Subscription;
   private pendingRequests: Map<number, (data: unknown) => void> = new Map();
 
+  /**
+   * Creates a new client for a specific service topic.
+   * This client can send requests to the service and handle responses.
+   * It maintains a map of pending requests to match responses with their requests.
+   * The topic is used to identify the service this client communicates with.
+   * @param node PluginSDK instance
+   * @param topic The topic for the service
+   */
   constructor(
     private readonly node: PluginSDK,
     public readonly topic: string,
@@ -136,7 +154,7 @@ export class Client {
       const reqId = response?.reqId;
 
       if (PLUGIN_DEBUG) {
-        console.log(`SDK > Bus > Debug > Is service callback with id: ${reqId} `);
+        console.log(`SDK > Bus > Debug > Is service_topic callback with id: ${reqId} `);
       }
 
       if (reqId !== undefined && this.pendingRequests.has(reqId)) {
@@ -147,6 +165,12 @@ export class Client {
     });
   }
 
+  /**
+   * Sends a request to the service and returns a promise that resolves with the response data.
+   * @param reqId Unique request ID to match the response
+   * @param data The data to send with the request
+   * @returns A promise that resolves with the response data
+   */
   public sendRequest(reqId: number, data: unknown): Promise<unknown> {
     if (PLUGIN_DEBUG) {
       console.log(`SDK > Bus > Debug > Send request to service_topic: ${this.topic} with data:`, data);
@@ -161,7 +185,7 @@ export class Client {
    * Unsubscribe (destroy) this client and remove it from the list
    */
   public destroy(): void {
-    console.log(`SDK > Bus > Destroy client`);
+    console.log(`SDK > Bus > Destroy client of service_topic: ${this.topic}`);
     const index = this.node.clients.indexOf(this);
     if (index > -1) {
       this.node.clients.splice(index, 1);
@@ -176,22 +200,26 @@ export class Client {
  * Handles communication with the parent frame and iframe resizing
  */
 export class PluginSDK {
-  subscriptions: Subscription[] = [];
-  publishers: Publisher[] = [];
-  services: Service[] = [];
-  clients: Client[] = [];
+  readonly subscriptions: Subscription[] = [];
+  readonly publishers: Publisher[] = [];
+  readonly services: Service[] = [];
+  readonly clients: Client[] = [];
 
   // Internal resources
-  pubHeight: Publisher; // Publisher for iframe height resizing
-  frmHeight: number = 0; // Current iframe height
-  resizeObserver: ResizeObserver | null = null;
+  private readonly pubHeight: Publisher; // Publisher for iframe height resizing
+  private readonly resizeObserver: ResizeObserver;
+  private frmHeight: number = 0; // Current iframe height
 
   constructor() {
     this._initializeMessageListener();
 
     // Internal resources
     this.pubHeight = this.createPublisher(PLUGIN_TOPIC_RESIZE_IFRAME);
-    this._initializeResizeObserver();
+    this.resizeObserver = new ResizeObserver(() => {
+      this._sendHeightToParent();
+    });
+
+    this._startResizeObserver();
   }
 
   /**
@@ -211,6 +239,13 @@ export class PluginSDK {
     return new Subscription(this, topic, callback);
   }
 
+  /**
+   * Creates a new client instance for the specified topic.
+   * This client can be used to handle specific functionality or data processing.
+   * Clients can be used to encapsulate logic that plugins can interact with.
+   * @param topic The topic for the client
+   * @returns A new client instance
+   */
   public createClient(topic: string): Client {
     return new Client(this, topic);
   }
@@ -221,13 +256,20 @@ export class PluginSDK {
   public destroy(): void {
     if (this.resizeObserver) {
       this.resizeObserver.disconnect();
-      this.resizeObserver = null;
     }
 
-    this.subscriptions.length = 0;
-    this.publishers.length = 0;
-    this.services.length = 0;
-    this.clients.length = 0;
+    // Helper to destroy and clear an array of items with a destroy method
+    const destroyAll = <T extends { destroy: () => void }>(arr: T[]) => {
+      for (const item of arr) {
+        item.destroy();
+      }
+      arr.length = 0;
+    };
+
+    destroyAll(this.subscriptions);
+    destroyAll(this.publishers);
+    destroyAll(this.clients);
+    destroyAll(this.services);
 
     console.log('SDK > PluginSDK destroyed and resources cleaned up.');
   }
@@ -287,15 +329,11 @@ export class PluginSDK {
   /**
    * Initialize resize observer to automatically adjust iframe height
    */
-  private _initializeResizeObserver(): void {
+  private _startResizeObserver(): void {
     console.log('SDK > iframe > Initialize ResizeObserver for iframe height adjustment');
 
-    this.resizeObserver = new ResizeObserver(() => {
-      this._sendHeightToParent();
-    });
-
-    // Observe document body for changes
     if (document.body) {
+      // Observe document body for changes
       this.resizeObserver.observe(document.body);
     }
 
@@ -333,10 +371,6 @@ export function usePluginSDK() {
   const sdk = getPluginSDK();
 
   return {
-    // publish: (topic: string, message: unknown) => sdk.publish2console(topic, message),
-    // subscribe: (topic: string, callback: (data: unknown) => void) => sdk.subscribe2console(topic, callback),
-    // unsubscribe: (topic: string) => sdk.unsubscribe2console(topic),
-    // sendHeight: () => sdk._sendHeightToParent(),
     sdk,
   };
 }
