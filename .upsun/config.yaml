@@ -2,13 +2,15 @@ applications:
   fastsun:
     source:
       root: "/"
+
     type: "nodejs:22"
+
     web:
       commands:
         start: "npx ts-node src/proxy.js"
       locations:
         "/":
-          root: 'dist'
+          root: "dist"
           index:
             - "index.html"
           headers:
@@ -23,15 +25,28 @@ applications:
     build:
       flavor: none
 
+    mounts:
+      "config":
+        source: "storage"
+        source_path: "config"
+
     hooks:
       build: |
         set -eux
         npm i
         npm run build-only
-        cp manifest.json dist/
+
+        #cp manifest.json dist/
+        echo "Create hack for writable config..."
+        mkdir -p config
+        echo "placeholder of symlink" > config/placeholder.txt
+        ln -s /app/config/manifest.json dist/manifest.json
       deploy: |
         set -eux
-        # echo 'Put your deploy command here'
+        echo "Deploy writable config..."
+        cp manifest.json config/manifest.json
+        export ROUTE_PLUGINAPP=$(echo $PLATFORM_ROUTES | base64 -d | jq -r 'to_entries[] | select(.value.primary == true) | .value.production_url')
+        sed -i "s|http://localhost:8080|${ROUTE_PLUGINAPP}|g" config/manifest.json
 
 routes:
   "https://{default}/":

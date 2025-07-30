@@ -118,12 +118,12 @@
   --p-border-radius-xl: var(--border-radius-xlarge);
 }
 
-@media (prefers-color-scheme: dark) {
+/* @media (prefers-color-scheme: dark) {
   :root {
     --color-text: rgba(235, 235, 235, 0.64);
     --color-background: #181818;
   }
-}
+} */
 
 /* Essential base styles */
 *,

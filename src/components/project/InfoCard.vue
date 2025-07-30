@@ -50,7 +50,7 @@ function logout() {
     <template #title>
       <div class="card-title-header">
         <span>CDN summary</span>
-        <Button icon="pi pi-sign-out" outlined rounded @click="logout" label="Logout" />
+        <Button icon="pi pi-sign-out" outlined rounded @click="logout" label="Logout Fastly" />
       </div>
     </template>
     <template #content>

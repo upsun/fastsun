@@ -1,23 +1,32 @@
 {
-  "_self": "https://fastsun.plugins.pltfrm.sh/manifest.json",
-  "url": "https://fastsun.plugins.pltfrm.sh",
+  "id": "erwlgagf6enrq",
+  "name": "FastSun",
+  "version": "1.0.0",
+  "description": "Manage your Fastly CDN",
+  "author": "Upsun community",
+  "icon": "",
+  "screenshots": [],
+  "website": "https://github.com/upsun",
+
+  "_self": "http://localhost:8080/manifest.json",
+  "url": "http://localhost:8080",
   "format": "amd",
   "scopes": [],
-  "id": "erwlgagf6enrq",
   "type": "iframe",
-  "name": "FastSun",
+
   "hooks": [
     {
       "name": "environment",
       "route": "/:organizationId/:projectId/:environmentId/",
       "type": "tab",
-      "title": "CDN - FastSun"
+      "title": "CDN - FastSun ❤️"
     }
   ],
-  "topics": {
-    "subscriptions": [],
-    "publishers": [],
-    "clients": [],
+
+  "permissions": {
+    "subscriptions": ["PLUGIN_TOPIC_VIEW_LOADED"],
+    "publishers": ["PLUGIN_TOPIC_VIEW_LOADED", "PLUGIN_TOPIC_RESIZE_IFRAME"],
+    "clients": ["PLUGIN_SRV_PROPS"],
     "services": []
   }
 }
