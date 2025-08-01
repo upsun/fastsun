@@ -59,7 +59,8 @@ function logout() {
           <div class="info-item">
             <span class="info-label">Fastly Service ID</span>
             <div class="info-value">
-              <a class="info-link" :href="'https://manage.fastly.com/configure/services/' + service_id" target="_blank">
+              <a class="info-link" href="" target="_blank" style="pointer-events: none">
+                <!-- :href="'https://manage.fastly.com/configure/services/' + service_id" -->
                 {{ service_id }}
               </a>
             </div>
