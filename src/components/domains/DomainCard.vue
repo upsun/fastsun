@@ -113,7 +113,7 @@ function deleteDomain() {
   }
 }
 </script>
-
+<!--
 <template>
   <Card>
     <template #title v-if="false">Domain Information</template>
@@ -193,4 +193,4 @@ function deleteDomain() {
     </template>
   </Dialog>
 </template>
->
+-->

@@ -52,6 +52,7 @@ function saveDomain() {
 }
 </script>
 
+<!--
 <template>
   <Dialog
     v-bind:visible="domain_state_dialog"
@@ -79,3 +80,4 @@ function saveDomain() {
     </template>
   </Dialog>
 </template>
+-->
