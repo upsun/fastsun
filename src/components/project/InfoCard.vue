@@ -59,15 +59,13 @@ function logout() {
           <div class="info-item">
             <span class="info-label">Fastly Service ID</span>
             <div class="info-value">
-              <a class="info-link" href="" target="_blank" style="pointer-events: none">
-                <!-- :href="'https://manage.fastly.com/configure/services/' + service_id" -->
-                {{ service_id }}
-              </a>
+              <span class="version-badge">{{ service_id }}</span>
+              <!-- :href="'https://manage.fastly.com/configure/services/' + service_id" -->
             </div>
           </div>
 
           <div class="info-item">
-            <span class="info-label">Current Version</span>
+            <span class="info-label">Current VCL Version</span>
             <div class="info-value">
               <span class="version-badge">v{{ vcl_version }}</span>
             </div>
