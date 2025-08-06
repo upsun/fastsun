@@ -59,9 +59,9 @@ function saveId() {
     <template #title>Setup Fastly Credentials</template>
     <template #content>
       <div class="setupcard-explanation text-sm text-gray-700">
-        Your Fastly credentials are securely stored only in your browser (not on upsun).<br />This approach is more
-        secure because your credentials are never shared with any third parties, reducing the risk of unauthorized
-        access.<br />If you use a different browser or device, you will need to re-enter your credentials.
+        Your Fastly credentials are stored securely within your browser and are never transmitted to Upsun.<br />
+        This method enhances security by ensuring that your credentials are not shared with any third parties, thereby reducing the risk of unauthorized access.<br />
+        Please note that if you access Upsun from a different browser or device, you will be required to re-enter your Fastly credentials.<br />
       </div>
 
       <div>

@@ -41,7 +41,6 @@ FastSun provides a comprehensive web interface to manage your Fastly CDN through
 ### 🧹 **Cache Purging**
 - **Purge All**: Clear entire CDN cache with one click
 - **Selective Purging**: Purge specific URLs or content
-- **Purge by Key**: Target specific cache keys for purging
 - Real-time purge status and confirmation
 
 ### 🔐 **Security & Credentials**
@@ -53,7 +52,6 @@ FastSun provides a comprehensive web interface to manage your Fastly CDN through
 - Access real-time CDN performance data
 - Monitor traffic patterns and cache hit rates
 - Track bandwidth usage and request metrics
-- Historical data visualization
 
 All interactions with your Fastly service are performed through the official Fastly API, ensuring reliable and up-to-date access to your CDN configuration and metrics.
 

@@ -131,7 +131,7 @@ function deleteDomain() {
       >
         <template #header>
           <div class="flex flex-wrap gap-2 items-center justify-between">
-            <h4 class="m-0" style="display: inline-flex">Manage Domains</h4>
+            <h4 class="m-0" style="display: inline-flex">Domains</h4>
             <!--
             <Button
               label="Add"

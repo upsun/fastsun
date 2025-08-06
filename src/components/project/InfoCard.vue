@@ -67,7 +67,7 @@ function logout() {
           <div class="info-item">
             <span class="info-label">Current VCL Version</span>
             <div class="info-value">
-              <span class="version-badge">v{{ vcl_version }}</span>
+              <span class="version-badge">Version {{ vcl_version }}</span>
             </div>
           </div>
         </div>

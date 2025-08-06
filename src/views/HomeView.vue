@@ -133,8 +133,8 @@ const vclVersionIsDefined = computed(() => credentialsStore.vclVersionIsDefined.
         :project_detail="project_detail"
         @update:visible="handleInfoCardUpdate"
       />
-      <StatCard />
       <DomaCard :vcl_version="credentialsStore.getVclVersion()" />
+      <StatCard />
       <VersCard />
       <HistCard />
       <AclsCard :vcl_version="credentialsStore.getVclVersion()" />
