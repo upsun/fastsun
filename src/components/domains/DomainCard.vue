@@ -132,6 +132,7 @@ function deleteDomain() {
         <template #header>
           <div class="flex flex-wrap gap-2 items-center justify-between">
             <h4 class="m-0" style="display: inline-flex">Manage Domains</h4>
+            <!--
             <Button
               label="Add"
               icon="pi pi-plus"
@@ -140,6 +141,7 @@ function deleteDomain() {
               style="margin-left: auto"
               @click="addDomain()"
             />
+            -->
           </div>
         </template>
         <template #paginatorstart>
@@ -156,6 +158,7 @@ function deleteDomain() {
             <span>{{ $d(slotProps.data.created_at, 'long') }}</span>
           </template>
         </Column>
+        <!--
         <Column :exportable="false" style="min-width: 8rem" header="Actions">
           <template #body="slotProps">
             <Button icon="pi pi-pencil" outlined rounded @click="editDomain(slotProps.data)" />
@@ -168,6 +171,7 @@ function deleteDomain() {
             />
           </template>
         </Column>
+        -->
       </DataTable>
     </template>
   </Card>
