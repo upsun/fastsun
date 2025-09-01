@@ -46,6 +46,10 @@ body {
   width: 30em;
 }
 
+.p-tabpanels {
+  background-color: transparent;
+}
+
 footer {
   text-align: center;
   padding: 1rem;
