@@ -21,11 +21,11 @@ import VersCard from '@/components/vcl/VclVersionCard.vue';
 
 import LocalStore from '@/stores/localStorage';
 import { useCredentialsStore } from '@/stores/credentialsStore';
+import { TAB_VALUES, type TabValue, isValidTabValue } from '@/utils/tabsTools';
 import { usePluginSDK, PLUGIN_SRV_PROPS, PLUGIN_TOPIC_VIEW_LOADED } from '@/utils/pluginSDK';
 
 import ProjectAPIService from '@/components/project/project.service';
 import type ProjectEntity from '@/components/project/project.interface';
-import { TAB_VALUES, type TabValue, isValidTabValue, getValidTabValues } from '@/constants/tabs';
 
 // Main components
 const localStore = new LocalStore();
@@ -183,8 +183,9 @@ watch(
 
       // Clean up date parameters when switching to Real-time tab
       if (newTab === TAB_VALUES.REALTIME) {
-        delete query.from;
-        delete query.to;
+        //TODO(Mick): keep or not ?
+        // delete query.from;
+        // delete query.to;
       }
 
       router.replace({ query });
@@ -254,24 +255,3 @@ const vclVersionIsDefined = computed(() => credentialsStore.vclVersionIsDefined.
     </div>
   </main>
 </template>
-
-<style scoped>
-.loading-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 100vh;
-}
-
-.loading-content {
-  text-align: center;
-  padding: 2rem;
-}
-
-.loading-text {
-  margin-top: 1.5rem;
-  font-size: 1.125rem;
-  color: #6b7280;
-  font-weight: 500;
-}
-</style>

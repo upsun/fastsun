@@ -223,3 +223,22 @@ footer {
   padding: 14px 18px;
   border-radius: 6px;
 }
+
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+}
+
+.loading-content {
+  text-align: center;
+  padding: 2rem;
+}
+
+.loading-text {
+  margin-top: 1.5rem;
+  font-size: 1.125rem;
+  color: #6b7280;
+  font-weight: 500;
+}
