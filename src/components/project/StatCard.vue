@@ -344,6 +344,10 @@ function getNextStat() {
     .getStat()
     .then((result) => {
       if (result.Data.length > 0) {
+        // Check if chart instance is still available (avoid error during logout)
+        if (!chartInstance.value || !chartInstance.value.chart) {
+          return;
+        }
         const chart = chartInstance.value.chart;
         // Force chart to resize to container
         chart.resize();
@@ -392,8 +396,10 @@ function getNextStat() {
         chart.data.datasets[6].data.push(cnt_hit_ratio);
         chart.data.datasets[7].data.push(cnt_cache_coverage);
 
-        // Update chart with new data
-        chart.update();
+        // Update chart with new data (check if chart still exists)
+        if (chart && chart.update) {
+          chart.update();
+        }
       }
     })
     .catch((error) => {
