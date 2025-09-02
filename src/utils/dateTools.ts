@@ -9,14 +9,29 @@ export type DatePeriod = (typeof DATE_PERIODS)[keyof typeof DATE_PERIODS];
 
 // Utility functions for timestamp formatting
 export const formatDateForUrl = (date: Date): string => {
-  return date.getTime().toString(); // Convert to timestamp
+  return Math.floor(date.getTime() / 1000).toString(); // Convert to timestamp in seconds
 };
 
 export const parseDateFromUrl = (timestampStr: string): Date | null => {
   if (!timestampStr) return null;
-  const timestamp = parseInt(timestampStr, 10);
-  if (isNaN(timestamp)) return null;
-  const date = new Date(timestamp);
+
+  // Remove any non-numeric characters to prevent injection
+  const cleanedStr = timestampStr.replace(/[^0-9]/g, '');
+
+  if (!cleanedStr) return null;
+
+  // Parse as integer with radix 10 to prevent octal/hex parsing
+  const timestamp = parseInt(cleanedStr, 10);
+
+  // Validate timestamp range (reasonable bounds)
+  const MIN_TIMESTAMP = 946684800; // Year 2000
+  const MAX_TIMESTAMP = 4102444800; // Year 2100
+
+  if (isNaN(timestamp) || timestamp < MIN_TIMESTAMP || timestamp > MAX_TIMESTAMP) {
+    return null;
+  }
+
+  const date = new Date(timestamp * 1000); // Convert from seconds to milliseconds
   return isNaN(date.getTime()) ? null : date;
 };
 

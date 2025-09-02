@@ -136,7 +136,7 @@ onMounted(async () => {
   // Add a minimum delay to show the loading spinner (max 500ms)
   setTimeout(() => {
     isLoadingCredentials.value = false;
-  }, 500);
+  }, 800);
 
   // Debug
   console.log('FastSun > Test > Service ID:', credentialsStore.getServiceId());

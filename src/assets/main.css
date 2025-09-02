@@ -242,3 +242,30 @@ footer {
   color: #6b7280;
   font-weight: 500;
 }
+
+.push-right {
+  margin-left: auto;
+}
+
+.align-items-center {
+  align-items: center;
+}
+
+.ml-3 {
+  margin-left: 0.75rem;
+}
+
+.loading-spinner {
+  display: flex;
+  align-items: center;
+}
+
+.chart-spacer {
+  margin-top: 1rem;
+}
+
+.navigation-container {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}

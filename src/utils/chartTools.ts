@@ -9,7 +9,7 @@ export const verticalLinePlugin = {
   /**
    * Event handler for tracking cursor position
    */
-  afterEvent(chart: ChartJS, args: { event: ChartEvent & { x: number } }) {
+  afterEvent(chart: ChartJS, args: { event: ChartEvent & { x: number; type: string } }) {
     const {
       ctx,
       chartArea: { top, bottom },
@@ -17,10 +17,18 @@ export const verticalLinePlugin = {
     } = chart;
     const event = args.event;
 
-    if (event.x >= x.left && event.x <= x.right) {
+    // Check if mouse is within chart area
+    if (event.x >= x.left && event.x <= x.right && event.type !== 'mouseout') {
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
       chart._cursorX = event.x;
+    } else if (event.type === 'mouseout' || event.x < x.left || event.x > x.right) {
+      // Clear cursor position when mouse leaves chart area
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      chart._cursorX = undefined;
+      // Force chart redraw to remove the line
+      chart.draw();
     }
   },
 
@@ -47,10 +55,10 @@ export const verticalLinePlugin = {
 };
 
 /**
- * Chart configuration options for the time-series chart
- * Defines scales, tooltips, legends, and other chart behaviors
+ * Chart configuration options for real-time charts (seconds resolution)
+ * Defines scales, tooltips, legends, and other chart behaviors for live data
  */
-export const createChartOptions = () => ({
+export const createRealtimeChartOptions = () => ({
   responsive: true,
   maintainAspectRatio: false,
   animation: false,
@@ -75,7 +83,7 @@ export const createChartOptions = () => ({
     tooltip: {
       callbacks: {
         /**
-         * Custom tooltip label formatter
+         * Custom tooltip label formatter for real-time charts
          * @param {object} context - Tooltip context containing dataset and parsed data
          * @param {object} context.dataset - Dataset configuration with label and yAxisID
          * @param {object} context.parsed - Parsed data point with x and y values
@@ -150,7 +158,147 @@ export const createChartOptions = () => ({
         unit: 'second',
         unitStepSize: 1,
         displayFormats: {
-          second: 'hh:mm:ss',
+          second: 'HH:mm:ss',
+        },
+      },
+      title: {
+        display: true,
+        text: 'Time',
+      },
+    },
+  },
+});
+
+/**
+ * Chart configuration options for historical charts (days/months/years resolution)
+ * Defines scales, tooltips, legends, and other chart behaviors for historical data
+ * @param {string} timeUnit - The time unit for the x-axis ('day', 'month', 'year')
+ * @param {number} stepSize - The step size for the time axis
+ */
+export const createHistoricalChartOptions = (timeUnit: string = 'day', stepSize: number = 1) => ({
+  responsive: true,
+  maintainAspectRatio: false,
+  animation: false,
+  interaction: {
+    mode: 'nearest',
+    intersect: true,
+  },
+  plugins: {
+    legend: {
+      display: true,
+      position: 'right',
+      labels: {
+        boxWidth: 12,
+        padding: 10,
+        font: {
+          size: 13,
+        },
+        usePointStyle: true,
+        pointStyle: 'rect',
+      },
+    },
+    tooltip: {
+      callbacks: {
+        /**
+         * Custom tooltip label formatter
+         * @param {object} context - Tooltip context containing dataset and parsed data
+         * @param {object} context.dataset - Dataset configuration with label and yAxisID
+         * @param {object} context.parsed - Parsed data point with x and y values
+         * @returns {string} Formatted tooltip label with appropriate units
+         */
+        label: function (context: { dataset: { label: string; yAxisID: string }; parsed: { y: number } }) {
+          const datasetLabel = context.dataset.label || '';
+          const value = context.parsed.y;
+
+          // Add appropriate unit based on the dataset
+          if (context.dataset.yAxisID === 'y_per') {
+            return `${datasetLabel}: ${value.toFixed(2)}%`;
+          } else {
+            // Format count values with unit prefixes and thousands separators
+            let formattedValue;
+            if (value >= 1000000000) {
+              formattedValue = (value / 1000000000).toFixed(1).replace(/\.0$/, '') + 'G';
+            } else if (value >= 1000000) {
+              formattedValue = (value / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
+            } else if (value >= 1000) {
+              formattedValue = (value / 1000).toFixed(1).replace(/\.0$/, '') + 'k';
+            } else {
+              formattedValue = value.toLocaleString();
+            }
+            return `${datasetLabel}: ${formattedValue}`;
+          }
+        },
+      },
+      mode: 'index',
+      intersect: false,
+    },
+  },
+  scales: {
+    y_cnt: {
+      type: 'linear',
+      display: true,
+      position: 'left',
+      min: 0,
+      ticks: {
+        /**
+         * Custom tick label formatter for count axis
+         * @param {number} value - The tick value
+         * @returns {string} Formatted tick label with thousands separators and unit prefixes
+         */
+        callback: function (value: number) {
+          // Format with unit prefixes (k, M, G) and thousands separators
+          if (value >= 1000000000) {
+            return (value / 1000000000).toFixed(1).replace(/\.0$/, '') + 'G';
+          } else if (value >= 1000000) {
+            return (value / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
+          } else if (value >= 1000) {
+            return (value / 1000).toFixed(1).replace(/\.0$/, '') + 'k';
+          } else {
+            return value.toLocaleString();
+          }
+        },
+      },
+      title: {
+        display: true,
+        text: 'Count',
+      },
+    },
+    y_per: {
+      type: 'linear',
+      display: true,
+      position: 'right',
+      min: 0,
+      max: 100,
+      ticks: {
+        /**
+         * Custom tick label formatter for percentage axis
+         * @param {number} value - The tick value
+         * @returns {string} Formatted tick label with '%' suffix
+         */
+        callback: function (value: number) {
+          return value + '%';
+        },
+      },
+      title: {
+        display: true,
+        text: 'Percentage',
+      },
+      grid: {
+        drawOnChartArea: false,
+      },
+    },
+    x: {
+      type: 'time',
+      time: {
+        unit: timeUnit,
+        unitStepSize: stepSize,
+        displayFormats: {
+          second: 'HH:mm:ss',
+          minute: 'HH:mm',
+          hour: 'HH:mm',
+          day: 'MMM dd',
+          month: 'MMM yyyy',
+          year: 'yyyy',
         },
       },
       title: {
@@ -261,4 +409,16 @@ export const createChartData = (sampleCount: number) => {
     labels: timestamps,
     datasets: createChartDatasets(sampleCount),
   };
+};
+
+/**
+ * @deprecated Use createRealtimeChartOptions() or createHistoricalChartOptions() instead
+ * Legacy function for backward compatibility
+ */
+export const createChartOptions = (timeUnit: string = 'second', stepSize: number = 1) => {
+  if (timeUnit === 'second') {
+    return createRealtimeChartOptions();
+  } else {
+    return createHistoricalChartOptions(timeUnit, stepSize);
+  }
 };
