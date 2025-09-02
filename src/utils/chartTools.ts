@@ -11,8 +11,6 @@ export const verticalLinePlugin = {
    */
   afterEvent(chart: ChartJS, args: { event: ChartEvent & { x: number; type: string } }) {
     const {
-      ctx,
-      chartArea: { top, bottom },
       scales: { x },
     } = chart;
     const event = args.event;

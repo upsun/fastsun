@@ -107,6 +107,7 @@ const loadHistoricalData = async () => {
 
     // Clear existing data
     chart.data.labels = [];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     chart.data.datasets.forEach((dataset: any) => {
       dataset.data = [];
     });
@@ -116,6 +117,7 @@ const loadHistoricalData = async () => {
       // On convertit en millisecondes pour Chart.js
       const fromTimestampMs = parseInt(fromTimestamp) * 1000;
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       result.data.forEach((data: any, index: number) => {
         // Extract raw metrics from API response
         const cnt_request = data.requests || 0;
