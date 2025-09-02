@@ -45,7 +45,13 @@ class CredentialsStore {
   loadCredentials() {
     if (!this._projectId.value || !this._environmentId.value) return;
 
-    const credentials = this.localStore.getFastlyCredentials(this._projectId.value, this._environmentId.value);
+    let credentials = this.localStore.getFastlyCredentials(this._projectId.value, this._environmentId.value);
+
+    // Fallback to default credentials if project-specific credentials are not found
+    if (!credentials) {
+      credentials = this.localStore.getFastlyCredentials('default', 'default');
+    }
+
     if (credentials) {
       this._serviceId.value = credentials.fastlyId;
       this._serviceToken.value = credentials.fastlyToken;

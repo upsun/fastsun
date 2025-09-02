@@ -148,3 +148,18 @@ body {
   font-size: 15px;
   line-height: 1.6;
 }
+
+/* QueryCard component styles */
+.push-right {
+  margin-left: auto;
+}
+
+.navigation-container {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.chart-spacer {
+  margin-top: 1.5rem;
+}

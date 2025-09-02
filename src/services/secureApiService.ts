@@ -1,11 +1,23 @@
 import { useCredentialsStore } from '@/stores/credentialsStore';
+import { validateServiceId, validateToken, validateApiParam, createSecureSearchParams } from '@/utils/securityUtils';
 
 class SecureApiService {
   private getCredentials() {
     const credentialsStore = useCredentialsStore();
+    const serviceId = credentialsStore.getServiceId();
+    const serviceToken = credentialsStore.getServiceToken();
+
+    // Validate credentials before using them
+    const validatedServiceId = validateServiceId(serviceId);
+    const validatedServiceToken = validateToken(serviceToken);
+
+    if (!validatedServiceId || !validatedServiceToken) {
+      throw new Error('Invalid service credentials');
+    }
+
     return {
-      serviceId: credentialsStore.getServiceId(),
-      serviceToken: credentialsStore.getServiceToken(),
+      serviceId: validatedServiceId,
+      serviceToken: validatedServiceToken,
     };
   }
 
@@ -79,15 +91,33 @@ class SecureApiService {
     const { serviceId } = this.getCredentials();
     let url = `https://api.fastly.com/stats/service/${serviceId}`;
 
-    if (field) url += `/${field}`;
+    // Validate field parameter
+    if (field) {
+      const validatedField = validateApiParam(field);
+      if (!validatedField) {
+        throw new Error('Invalid field parameter');
+      }
+      url += `/${validatedField}`;
+    }
 
-    const params = new URLSearchParams();
-    if (from) params.append('from', from);
-    if (to) params.append('to', to);
-    if (by) params.append('by', by);
+    // Create secure search params
+    const params: Record<string, unknown> = {};
+    if (from) {
+      const validatedFrom = validateApiParam(from);
+      if (validatedFrom) params.from = validatedFrom;
+    }
+    if (to) {
+      const validatedTo = validateApiParam(to);
+      if (validatedTo) params.to = validatedTo;
+    }
+    if (by) {
+      const validatedBy = validateApiParam(by);
+      if (validatedBy) params.by = validatedBy;
+    }
 
-    if (params.toString()) {
-      url += `?${params.toString()}`;
+    const secureParams = createSecureSearchParams(params);
+    if (secureParams.toString()) {
+      url += `?${secureParams.toString()}`;
     }
 
     return this.makeRequest(url);
@@ -99,7 +129,14 @@ class SecureApiService {
 
   async purgeByKey(key: string) {
     const { serviceId } = this.getCredentials();
-    return this.makeRequest(`https://api.fastly.com/service/${serviceId}/purge/${key}`, {
+
+    // Validate the purge key to prevent injection
+    const validatedKey = validateApiParam(key);
+    if (!validatedKey) {
+      throw new Error('Invalid purge key');
+    }
+
+    return this.makeRequest(`https://api.fastly.com/service/${serviceId}/purge/${validatedKey}`, {
       method: 'POST',
     });
   }

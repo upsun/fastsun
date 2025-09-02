@@ -46,6 +46,10 @@ body {
   width: 30em;
 }
 
+.p-tabpanels {
+  background-color: transparent;
+}
+
 footer {
   text-align: center;
   padding: 1rem;
@@ -218,4 +222,50 @@ footer {
   color: #ad6800;
   padding: 14px 18px;
   border-radius: 6px;
+}
+
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+}
+
+.loading-content {
+  text-align: center;
+  padding: 2rem;
+}
+
+.loading-text {
+  margin-top: 1.5rem;
+  font-size: 1.125rem;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.push-right {
+  margin-left: auto;
+}
+
+.align-items-center {
+  align-items: center;
+}
+
+.ml-3 {
+  margin-left: 0.75rem;
+}
+
+.loading-spinner {
+  display: flex;
+  align-items: center;
+}
+
+.chart-spacer {
+  margin-top: 1rem;
+}
+
+.navigation-container {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
