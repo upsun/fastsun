@@ -1,5 +1,6 @@
 import AppLayout from '@/layout/AppLayout.vue';
 import { createRouter, createWebHistory } from 'vue-router';
+import { installSecurityMiddleware } from '@/utils/securityMiddleware';
 
 /**
  * Global router of App.
@@ -32,6 +33,13 @@ const router = createRouter({
     //   component: () => import('@/views/AboutView.vue'),
     // },
   ],
+});
+
+// Install security middleware
+installSecurityMiddleware(router, {
+  enableRateLimit: true,
+  enableParameterValidation: true,
+  logSuspiciousActivity: true,
 });
 
 export default router;

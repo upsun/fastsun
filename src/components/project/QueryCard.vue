@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue';
+import { ref, onMounted, watch, nextTick } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import SelectButton from 'primevue/selectbutton';
 import DatePicker from 'primevue/datepicker';
@@ -10,10 +10,11 @@ import 'chartjs-adapter-date-fns';
 
 import { useCredentialsStore } from '@/stores/credentialsStore';
 import ProjectAPIService from './project.service';
-import { TAB_VALUES } from '@/utils/tabsTools';
+import { TAB_VALUES, type TabValue } from '@/utils/tabsTools';
 import { formatDateForUrl, parseDateFromUrl, getCurrentMonth, getCurrentPeriod, DATE_PERIODS } from '@/utils/dateTools';
 import { verticalLinePlugin, createHistoricalChartOptions, createChartData } from '@/utils/chartTools';
 import { validateTabValue, validateDateRange } from '@/utils/securityUtils';
+import { usePluginSDK } from '@/utils/pluginSDK';
 
 // Router setup
 const route = useRoute();
@@ -21,6 +22,8 @@ const router = useRouter();
 
 // Initialize dependencies and constants
 const credentialsStore = useCredentialsStore();
+
+const { sdk } = usePluginSDK();
 
 // Initialize dates from URL parameters or default to current month
 const initializeDatesFromUrl = (): [Date, Date] => {
@@ -75,14 +78,19 @@ const chartOptions = ref(createHistoricalChartOptions('day', 1));
 // Loading state for API calls
 const isLoading = ref(false);
 
+// Flag to track when loading from external component
+const isLoadingFromExternal = ref(false);
+
 const chartData = createChartData(6);
 
 /** Reference to the Chart component instance */
 const chartInstance = ref();
 
 // Function to load historical data - extracted from onMounted to be reusable
-const loadHistoricalData = async () => {
-  if (!dates.value || dates.value.length !== 2 || !dates.value[0] || !dates.value[1]) {
+const loadHistoricalData = async (forceDates?: [Date, Date]) => {
+  const activeDates = forceDates || dates.value;
+
+  if (!activeDates || activeDates.length !== 2 || !activeDates[0] || !activeDates[1]) {
     return; // No valid date range selected
   }
 
@@ -92,8 +100,21 @@ const loadHistoricalData = async () => {
     const projectService = new ProjectAPIService(credentialsStore.getServiceId(), credentialsStore.getServiceToken());
 
     // Convert selected dates to timestamps (in seconds)
-    const fromTimestamp = Math.floor(dates.value[0].getTime() / 1000).toString();
-    const toTimestamp = Math.floor(dates.value[1].getTime() / 1000).toString();
+    const fromTimestamp = Math.floor(activeDates[0].getTime() / 1000).toString();
+
+    // For the end date, we need to include the entire day, so we add 24 hours - 1 second
+    // This ensures that the API includes data for the last selected day
+    const endOfDay = new Date(activeDates[1]);
+    endOfDay.setHours(23, 59, 59, 999); // Set to end of the day
+    const toTimestamp = Math.floor(endOfDay.getTime() / 1000).toString();
+
+    console.log('Loading historical data for dates:', {
+      from: activeDates[0].toISOString(),
+      to: activeDates[1].toISOString(),
+      toEndOfDay: endOfDay.toISOString(),
+      fromTimestamp,
+      toTimestamp,
+    });
 
     const result = await projectService.getHistoricalData(fromTimestamp, toTimestamp, 'day');
 
@@ -314,7 +335,38 @@ const getFirstWeekOfMonth = (referenceDate: Date): [Date, Date] => {
 };
 
 onMounted(async () => {
-  await loadHistoricalData();
+  // Check if we need to load dates from external component first
+  const currentTab = Array.isArray(route.query.tab) ? route.query.tab[0] : route.query.tab;
+  const fromParam = Array.isArray(route.query.from) ? route.query.from[0] : route.query.from;
+  const toParam = Array.isArray(route.query.to) ? route.query.to[0] : route.query.to;
+
+  // Only load immediately if we're on History tab AND we have dates in URL OR we're not on History tab
+  if (currentTab === TAB_VALUES.HISTORY) {
+    if (fromParam && toParam) {
+      // We have URL dates, load immediately
+      await loadHistoricalData();
+    } else {
+      // We don't have URL dates, check external component first
+      try {
+        const urlProps = await sdk.getUrlParams<UrlProps>();
+        if (urlProps && urlProps.from && urlProps.to) {
+          // External component has dates, they will be handled by the URL watcher
+          console.log('Dates will be loaded from external component');
+          return;
+        } else {
+          // No external dates, load with current dates
+          await loadHistoricalData();
+        }
+      } catch (error) {
+        // Error getting external dates, load with current dates
+        console.log('Error getting external dates, loading with current dates');
+        await loadHistoricalData();
+      }
+    }
+  } else {
+    // Not on History tab, load immediately
+    await loadHistoricalData();
+  }
 });
 
 // Flag to prevent infinite loops during initialization
@@ -362,17 +414,34 @@ watch(selected, (newPeriod, oldPeriod) => {
   dates.value = newDates;
 });
 
+interface UrlProps {
+  from?: string;
+  to?: string;
+  tab?: TabValue;
+}
+
 // Watch URL changes to update dates and mode
 watch(
   () => [route.query.from, route.query.to, route.query.tab],
-  ([newFrom, newTo, newTab]) => {
+  async ([newFrom, newTo, newTab]) => {
     // Only process date changes if we're on the History tab
     const currentTab = Array.isArray(newTab) ? newTab[0] : newTab;
     if (currentTab !== TAB_VALUES.HISTORY) return;
 
+    let fromParam = newFrom;
+    let toParam = newTo;
+
+    if (!newFrom && !newTo) {
+      const urlProps = await sdk.getUrlParams<UrlProps>();
+      if (urlProps) {
+        fromParam = urlProps.from;
+        toParam = urlProps.to;
+      }
+    }
+
     // Handle case where query params can be arrays
-    const fromParam = Array.isArray(newFrom) ? newFrom[0] : newFrom;
-    const toParam = Array.isArray(newTo) ? newTo[0] : newTo;
+    fromParam = Array.isArray(fromParam) ? fromParam[0] : fromParam;
+    toParam = Array.isArray(toParam) ? toParam[0] : toParam;
 
     if (fromParam && toParam) {
       const fromDate = parseDateFromUrl(fromParam as string);
@@ -390,9 +459,19 @@ watch(
           currentDates[1].getTime() !== toDate.getTime();
 
         if (datesAreDifferent) {
-          dates.value = [fromDate, toDate];
-          // Update mode based on the date range from URL
+          // Update mode based on the date range first
           selected.value = initializeModeFromDates([fromDate, toDate]);
+
+          // Force reload of historical data when dates come from external component
+          if (!newFrom && !newTo) {
+            isLoadingFromExternal.value = true;
+            // Load data with the new dates directly, before updating dates.value
+            await loadHistoricalData([fromDate, toDate]);
+            isLoadingFromExternal.value = false;
+          }
+
+          // Update dates.value after loading data
+          dates.value = [fromDate, toDate];
         }
       }
     }
@@ -428,16 +507,22 @@ watch(
         newDates[1].getTime() !== oldDates[1].getTime();
 
       if (datesChanged && (currentFrom !== fromStr || currentTo !== toStr)) {
-        router.replace({
-          query: {
-            ...route.query,
-            from: fromStr,
-            to: toStr,
-          },
-        });
+        const query = {
+          ...route.query,
+          from: fromStr,
+          to: toStr,
+        };
 
-        // Reload historical data when dates change
-        await loadHistoricalData();
+        // Console mode.
+        await sdk.setUrlParams(query);
+
+        // Standalone mode.
+        router.replace({ query });
+
+        // Reload historical data when dates change (but not if already loading from external)
+        if (!isLoadingFromExternal.value) {
+          await loadHistoricalData();
+        }
       }
     }
   },
