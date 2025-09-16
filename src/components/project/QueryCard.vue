@@ -5,6 +5,8 @@ import SelectButton from 'primevue/selectbutton';
 import DatePicker from 'primevue/datepicker';
 import Card from 'primevue/card';
 import Chart from 'primevue/chart';
+import DataTable from 'primevue/datatable';
+import Column from 'primevue/column';
 import Button from 'primevue/button';
 import 'chartjs-adapter-date-fns';
 
@@ -14,7 +16,7 @@ import { TAB_VALUES, type TabValue } from '@/utils/tabsTools';
 import { formatDateForUrl, parseDateFromUrl, getCurrentMonth, getCurrentPeriod, DATE_PERIODS } from '@/utils/dateTools';
 import { verticalLinePlugin, createHistoricalChartOptions, createChartData } from '@/utils/chartTools';
 import { validateTabValue, validateDateRange } from '@/utils/securityUtils';
-import { usePluginSDK } from '@/utils/pluginSDK';
+import { usePluginSDK } from 'pluginapp-sdk-node';
 
 // Router setup
 const route = useRoute();
@@ -24,6 +26,94 @@ const router = useRouter();
 const credentialsStore = useCredentialsStore();
 
 const { sdk } = usePluginSDK();
+
+// Metrics to display
+enum MetricKey {
+  BANDWIDTH,
+  REQUESTS,
+  HITS,
+  PASS,
+  MISS,
+  ERRORS,
+  ORIGIN_OFFLOAD,
+  HIT_RATIO,
+  CACHE_COVERAGE,
+
+  ALL_STATUS_2XX,
+  ALL_STATUS_3XX,
+  ALL_STATUS_4XX,
+  ALL_STATUS_5XX,
+  STATUS_406,
+  STATUS_404,
+  STATUS_429,
+  MISS_TIME,
+}
+
+interface MetricSpec {
+  /**
+   * Unique identifier for the metric
+   */
+  id: string;
+  /**
+   * Display label for the metric
+   */
+  label: string;
+  /**
+   * Indicates if the metric is a percentage
+   */
+  isPercent: boolean;
+  /**
+   * Conversion factor to apply to the raw metric value
+   */
+  tooltip?: string;
+  /**
+   * Conversion factor to apply to the raw metric value (e.g., 100 to convert to percentage)
+   */
+  convert?: number;
+  /**
+   * Number of decimal places to display
+   */
+  decimal?: number;
+}
+
+const metricsList: Map<MetricKey, MetricSpec> = new Map([
+  // Base count metrics
+  [MetricKey.BANDWIDTH, { id: 'bandwidth', label: 'Bandwidth (B)', isPercent: false }],
+  [MetricKey.REQUESTS, { id: 'requests', label: 'Requests', isPercent: false }],
+  [MetricKey.HITS, { id: 'hits', label: 'Hits', isPercent: false }],
+  [MetricKey.PASS, { id: 'pass', label: 'Pass', isPercent: false }],
+  [MetricKey.MISS, { id: 'miss', label: 'Miss', isPercent: false }],
+  [MetricKey.ERRORS, { id: 'errors', label: 'Errors', isPercent: false, tooltip: 'HTTP 5xx+4xx responses' }],
+
+  // Base percentage metrics
+  [
+    MetricKey.ORIGIN_OFFLOAD,
+    { id: 'origin_offload', label: 'Origin Offload (%)', isPercent: true, convert: 100, decimal: 2 },
+  ],
+  [MetricKey.HIT_RATIO, { id: 'hit_ratio', label: 'Hit Ratio (%)', isPercent: true, decimal: 2 }],
+  [MetricKey.CACHE_COVERAGE, { id: 'cache_coverage', label: 'Cache Coverage (%)', isPercent: true, decimal: 2 }],
+
+  // Extra metrics
+  [MetricKey.ALL_STATUS_2XX, { id: 'all_status_2xx', label: 'All Status 2xx', isPercent: false }],
+  [MetricKey.ALL_STATUS_3XX, { id: 'all_status_3xx', label: 'All Status 3xx', isPercent: false }],
+  [MetricKey.ALL_STATUS_4XX, { id: 'all_status_4xx', label: 'All Status 4xx', isPercent: false }],
+  [MetricKey.ALL_STATUS_5XX, { id: 'all_status_5xx', label: 'All Status 5xx', isPercent: false }],
+  [MetricKey.STATUS_406, { id: 'status_406', label: 'Status 406', isPercent: false }],
+  [MetricKey.STATUS_404, { id: 'status_404', label: 'Status 404', isPercent: false }],
+  [MetricKey.STATUS_429, { id: 'status_429', label: 'Status 429', isPercent: false }],
+  [MetricKey.MISS_TIME, { id: 'miss_time', label: 'Miss Time (ms)', isPercent: false, convert: 0.01, decimal: 2 }],
+]);
+
+// Variable pour stocker les stats cumulées
+interface MetricDisplay extends MetricSpec {
+  cumulated: number;
+  avg: number;
+  min: number;
+  max: number;
+  percentile95: number;
+}
+
+const cumulatedStat = ref<MetricDisplay[]>([]);
 
 // Initialize dates from URL parameters or default to current month
 const initializeDatesFromUrl = (): [Date, Date] => {
@@ -185,6 +275,8 @@ const loadHistoricalData = async (forceDates?: [Date, Date]) => {
       });
     }
 
+    computeCumulatedStat(result);
+
     // Update chart with new data (check if chart still exists)
     // This will display an empty chart if no data is available
     if (chart && chart.update) {
@@ -196,6 +288,57 @@ const loadHistoricalData = async (forceDates?: [Date, Date]) => {
     isLoading.value = false;
   }
 };
+
+function computeCumulatedStat(result: { data: Array<Record<string, number>> }) {
+  // Reset stats
+  cumulatedStat.value = [];
+
+  const metricsArr: Record<MetricKey, number[]> = {} as Record<MetricKey, number[]>;
+
+  // Normalize data into arrays for each metric
+  metricsList.forEach((metricSpec: MetricSpec, metricKey: MetricKey) => {
+    metricsArr[metricKey] = []; // Initialize array
+    switch (metricKey) {
+      case MetricKey.HIT_RATIO:
+        metricsArr[metricKey] = result.data.map((d) => {
+          const hits = d.hits ?? 0;
+          const miss = d.miss ?? 0;
+          return hits + miss > 0 ? (hits / (hits + miss)) * 100 : 0;
+        });
+        break;
+      case MetricKey.CACHE_COVERAGE:
+        metricsArr[metricKey] = result.data.map((d) => {
+          const hits = d.hits ?? 0;
+          const miss = d.miss ?? 0;
+          const pass = d.pass ?? 0;
+          return hits + miss + pass > 0 ? ((hits + miss) / (hits + miss + pass)) * 100 : 0;
+        });
+        break;
+
+      // All other metrics are direct mappings
+      default:
+        metricsArr[metricKey] = result.data.map((d) => d[metricSpec.id] ?? 0);
+        break;
+    }
+  });
+
+  // Make calculations (min, max...) for each metric
+  metricsList.forEach((metricSpec: MetricSpec, metricKey: MetricKey) => {
+    const metrics: number[] = metricsArr[metricKey];
+    const sorted = [...metrics].sort((a, b) => a - b);
+    const stat: MetricDisplay = {
+      ...metricSpec,
+
+      cumulated: metrics.reduce((a, b) => a + b, 0),
+      avg: metrics.length ? metrics.reduce((a, b) => a + b, 0) / metrics.length : 0,
+      min: metrics.length ? Math.min(...metrics) : 0,
+      max: metrics.length ? Math.max(...metrics) : 0,
+      percentile95: metrics.length ? Number(sorted[Math.max(0, Math.floor(0.95 * sorted.length) - 1)] ?? 0) : 0,
+    };
+
+    cumulatedStat.value.push(stat);
+  });
+}
 
 // Navigation functions for date range
 const navigatePrevious = () => {
@@ -420,6 +563,16 @@ interface UrlProps {
   tab?: TabValue;
 }
 
+/**
+ * Formats a numeric value without decimals and with thousands separator
+ */
+function format_int(value: number | string, convert: number = 1, decimal: number = 0): string {
+  if (value === null || value === undefined || isNaN(Number(value))) return '';
+
+  const valueConverted = Number(value) * convert;
+  return valueConverted.toLocaleString('fr-FR', { maximumFractionDigits: decimal });
+}
+
 // Watch URL changes to update dates and mode
 watch(
   () => [route.query.from, route.query.to, route.query.tab],
@@ -575,6 +728,59 @@ watch(
         :plugins="[verticalLinePlugin]"
         class="w-full h-[25rem] chart-container"
       />
+      <div class="mt-5">
+        <DataTable
+          :value="cumulatedStat"
+          stripedRows
+          resizableColumns
+          columnResizeMode="fit"
+          sortField=""
+          :sortOrder="-1"
+          :defaultSortOrder="-1"
+          class="p-datatable-sm real-stats-table"
+          :responsiveLayout="'scroll'"
+        >
+          <template #header>
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <span class="text-xl font-bold">Cumulated statistics</span>
+            </div>
+          </template>
+          <Column field="label" header="Metrics" sortable>
+            <template #body="slotProps">
+              <span v-tooltip.left="slotProps.data.tooltip">
+                {{ slotProps.data.label }}
+              </span>
+            </template>
+          </Column>
+          <Column field="cumulated" header="Total" sortable style="text-align: right">
+            <template #body="slotProps">
+              <span v-if="!slotProps.data.isPercent">
+                {{ format_int(slotProps.data.cumulated, slotProps.data.convert, slotProps.data.decimal) }}
+              </span>
+            </template>
+          </Column>
+          <Column field="avg" header="Average" sortable style="text-align: right">
+            <template #body="slotProps">
+              <span>{{ format_int(slotProps.data.avg, slotProps.data.convert, slotProps.data.decimal) }}</span>
+            </template>
+          </Column>
+          <Column field="min" header="Min" sortable style="text-align: right">
+            <template #body="slotProps">
+              <span>{{ format_int(slotProps.data.min, slotProps.data.convert, slotProps.data.decimal) }}</span>
+            </template>
+          </Column>
+          <Column field="max" header="Max" sortable style="text-align: right">
+            <template #body="slotProps">
+              <span>{{ format_int(slotProps.data.max, slotProps.data.convert, slotProps.data.decimal) }}</span>
+            </template>
+          </Column>
+          <Column field="percentile95" header="95th Percentile" sortable style="text-align: right">
+            <template #body="slotProps">
+              <span>{{ format_int(slotProps.data.percentile95, slotProps.data.convert, slotProps.data.decimal) }}</span>
+            </template>
+          </Column>
+        </DataTable>
+      </div>
     </template>
   </Card>
 </template>

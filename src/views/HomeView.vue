@@ -22,7 +22,7 @@ import VersCard from '@/components/vcl/VclVersionCard.vue';
 import LocalStore from '@/stores/localStorage';
 import { useCredentialsStore } from '@/stores/credentialsStore';
 import { TAB_VALUES, type TabValue, isValidTabValue } from '@/utils/tabsTools';
-import { usePluginSDK } from '@/utils/pluginSDK';
+import { usePluginSDK } from 'pluginapp-sdk-node';
 
 import ProjectAPIService from '@/components/project/project.service';
 import type ProjectEntity from '@/components/project/project.interface';

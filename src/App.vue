@@ -2,12 +2,12 @@
 // Init Application.
 import { getCurrentInstance, onMounted, onUnmounted } from 'vue';
 import LocalStorage from '@/stores/localStorage';
-import { getPluginSDK } from '@/utils/pluginSDK';
+import { getPluginSDK } from 'pluginapp-sdk-node';
 
 new LocalStorage().checkSchemaVersion();
 
-const app = getCurrentInstance()!.appContext.app
-app.config.globalProperties.toast_duration = 5000
+const app = getCurrentInstance()!.appContext.app;
+app.config.globalProperties.toast_duration = 5000;
 
 // Initialize Plugin SDK
 let pluginSDK: ReturnType<typeof getPluginSDK> | null = null;
