@@ -27,6 +27,7 @@
     "date-fns": "^4.1.0",
     "http-proxy": "^1.18.1",
     "mitt-vue": "^2.1.2",
+    "pluginapp-sdk-node": "^0.1.0",
     "primeicons": "^7.0.0",
     "primevue": "^4.3.7",
     "ts-node": "^10.9.2",

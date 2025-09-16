@@ -22,7 +22,7 @@ import VersCard from '@/components/vcl/VclVersionCard.vue';
 import LocalStore from '@/stores/localStorage';
 import { useCredentialsStore } from '@/stores/credentialsStore';
 import { TAB_VALUES, type TabValue, isValidTabValue } from '@/utils/tabsTools';
-import { usePluginSDK, PLUGIN_SRV_PROPS, PLUGIN_TOPIC_VIEW_LOADED } from '@/utils/pluginSDK';
+import { usePluginSDK } from 'pluginapp-sdk-node';
 
 import ProjectAPIService from '@/components/project/project.service';
 import type ProjectEntity from '@/components/project/project.interface';
@@ -98,37 +98,20 @@ function handleInfoCardUpdate(event: string) {
   }
 }
 
-let subViewLoaded: ReturnType<typeof sdk.createSubscription> | null = null;
-
-interface ProjectProps {
-  projectId: string;
-  environmentId: string;
+interface UrlProps {
+  tab?: TabValue;
 }
 
 onMounted(async () => {
   localStore.checkSchemaVersion();
 
-  const cltProps = sdk.createClient(PLUGIN_SRV_PROPS);
-  let props: ProjectProps | null = null;
-
-  try {
-    // Add timeout to prevent hanging in development environment
-    const propsPromise = cltProps.sendRequest(1, '*') as Promise<ProjectProps | null>;
-    const timeoutPromise = new Promise<null>((_, reject) => setTimeout(() => reject(new Error('SDK timeout')), 200));
-
-    props = await Promise.race([propsPromise, timeoutPromise]);
-  } catch (error) {
-    // Fallback to default when SDK fails or times out
-    props = null;
-  }
+  const props = await sdk.getUpsunContext();
 
   if (!props) {
     credentialsStore.setProjectInfo('default', 'default');
   } else {
     credentialsStore.setProjectInfo(props.projectId, props.environmentId);
   }
-
-  cltProps.destroy();
 
   // Load credentials immediately
   credentialsStore.loadCredentials();
@@ -143,21 +126,25 @@ onMounted(async () => {
   console.log('FastSun > Test > Service Defined:', credentialsStore.serviceIsDefined.value);
   console.log('FastSun > Test > Project ID:', credentialsStore.getProjectId());
   console.log('FastSun > Test > Environment ID:', credentialsStore.getEnvironmentId());
-
-  subViewLoaded = sdk.createSubscription(PLUGIN_TOPIC_VIEW_LOADED, (data) => {
-    console.log('FastSun > Test > Received View Loaded:', data);
-  });
-  const pubLoaded = sdk.createPublisher(PLUGIN_TOPIC_VIEW_LOADED);
-  pubLoaded.publish({ view: 'HomeView', timestamp: new Date().toISOString() });
-  pubLoaded.destroy();
 });
 
-// Tab section
+onUnmounted(() => {});
+
+//// Tab section ////
 
 // Watch URL changes to update active tab
 watch(
   () => route.query.tab,
-  (newTab) => {
+  async (newTab) => {
+    // Console mode.
+    if (!newTab && !Number.isFinite(Number(newTab))) {
+      const urlProps = await sdk.getUrlParams<UrlProps>();
+      if (urlProps) {
+        newTab = urlProps.tab && isValidTabValue(urlProps.tab) ? urlProps.tab : TAB_VALUES.REALTIME;
+      }
+    }
+
+    // Standalone mode.
     if (newTab && isValidTabValue(newTab)) {
       activeTab.value = newTab;
     } else if (newTab && !isValidTabValue(newTab)) {
@@ -176,7 +163,7 @@ watch(
 // Watch active tab changes to update URL
 watch(
   activeTab,
-  (newTab) => {
+  async (newTab) => {
     if (route.query.tab !== newTab) {
       const query = { ...route.query };
       query.tab = newTab;
@@ -188,15 +175,15 @@ watch(
         // delete query.to;
       }
 
+      // Console mode.
+      await sdk.setUrlParams(query);
+
+      // Standalone mode.
       router.replace({ query });
     }
   },
   { flush: 'post' },
 ); // Ensure DOM updates are complete before navigation
-
-onUnmounted(() => {
-  if (subViewLoaded) subViewLoaded.destroy();
-});
 
 const hasFastlyCredentials = computed(() => credentialsStore.getServiceId() && credentialsStore.getServiceToken());
 const vclVersionIsDefined = computed(() => credentialsStore.vclVersionIsDefined.value);

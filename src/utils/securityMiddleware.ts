@@ -5,6 +5,7 @@
 import type { Router, RouteLocationNormalized, NavigationGuardNext } from 'vue-router';
 import { validateTabValue, validateTimestamp, RateLimiter } from './securityUtils';
 import { TAB_VALUES } from './tabsTools';
+import { useSecurityStore } from '@/stores/securityStore';
 
 // Global rate limiter instance
 const globalRateLimiter = new RateLimiter(1000, 60000); // 1000 requests per minute
@@ -132,24 +133,30 @@ const checkRateLimit = (): boolean => {
  */
 export const securityMiddleware = (config: Partial<SecurityConfig> = {}) => {
   const finalConfig = { ...defaultConfig, ...config };
+  const securityStore = useSecurityStore();
 
   return (to: RouteLocationNormalized, from: RouteLocationNormalized, next: NavigationGuardNext) => {
     try {
       // Rate limiting check
       if (finalConfig.enableRateLimit && !checkRateLimit()) {
+        securityStore.addRateLimitWarning();
         logSecurityEvent('ROUTE_ACCESS_BLOCKED', {
           reason: 'rate_limit_exceeded',
           route: to.path,
           timestamp: new Date().toISOString(),
         });
-
-        // Redirect to an error page or show a message
-        // For now, we'll allow the request but log it
-        // In production, you might want to block it entirely
       }
 
       // Parameter validation
       if (finalConfig.enableParameterValidation && !validateRouteParameters(to.query)) {
+        const invalidParams = Object.keys(to.query).filter((key) => {
+          if (key === 'tab') return validateTabValue(to.query[key]) === null;
+          if (key === 'from' || key === 'to') return validateTimestamp(to.query[key]) === null;
+          return false;
+        });
+
+        securityStore.addParameterValidationError(invalidParams);
+
         logSecurityEvent('ROUTE_ACCESS_BLOCKED', {
           reason: 'invalid_parameters',
           route: to.path,
@@ -184,12 +191,12 @@ export const securityMiddleware = (config: Partial<SecurityConfig> = {}) => {
           }
         }
 
-        // Redirect with cleaned parameters
-        next({ path: to.path, query: cleanedQuery });
+        // For now, continue with cleaned parameters
+        // In a future version, we could implement a redirect
+        console.warn('Unsafe URL parameters detected and cleaned:', invalidParams);
+        next();
         return;
-      }
-
-      // All checks passed, continue to route
+      } // All checks passed, continue to route
       next();
     } catch (error) {
       logSecurityEvent('SECURITY_MIDDLEWARE_ERROR', {

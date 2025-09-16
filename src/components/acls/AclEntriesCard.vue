@@ -130,10 +130,12 @@ function addIp() {
 
 function confirmDeleteAclEntry(index: number) {
   const ipEntity = displayEntries.value[index];
-  console.log('FastSun > Delete IP (check): ' + ipEntity.id);
+  if (ipEntity) {
+    console.log('FastSun > Delete IP (check): ' + ipEntity.id);
 
-  ip_selected.value = ipEntity;
-  openIpDeleteModal();
+    ip_selected.value = ipEntity;
+    openIpDeleteModal();
+  }
 }
 
 function deleteIp() {

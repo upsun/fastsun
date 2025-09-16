@@ -7,6 +7,7 @@ import Aura from '@primevue/themes/aura';
 import PrimeVue from 'primevue/config';
 import Button from 'primevue/button';
 import Card from 'primevue/card';
+import Tooltip from 'primevue/tooltip';
 
 import ConfirmationService from 'primevue/confirmationservice';
 import ToastService from 'primevue/toastservice';
@@ -79,6 +80,7 @@ const _app = createApp(App)
   .use(ConfirmationService)
   .component('Card', Card)
   .component('Button', Button)
+  .directive('tooltip', Tooltip)
   // @see https://vuejs.org/guide/components/provide-inject
   .mount(matchingElement as Element);
 //.mount('#app');

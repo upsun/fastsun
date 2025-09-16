@@ -16,17 +16,19 @@ export const verticalLinePlugin = {
     const event = args.event;
 
     // Check if mouse is within chart area
-    if (event.x >= x.left && event.x <= x.right && event.type !== 'mouseout') {
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore
-      chart._cursorX = event.x;
-    } else if (event.type === 'mouseout' || event.x < x.left || event.x > x.right) {
-      // Clear cursor position when mouse leaves chart area
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore
-      chart._cursorX = undefined;
-      // Force chart redraw to remove the line
-      chart.draw();
+    if (x && event.x !== undefined) {
+      if (event.x >= x.left && event.x <= x.right && event.type !== 'mouseout') {
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
+        chart._cursorX = event.x;
+      } else if (event.type === 'mouseout' || event.x < x.left || event.x > x.right) {
+        // Clear cursor position when mouse leaves chart area
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
+        chart._cursorX = undefined;
+        // Force chart redraw to remove the line
+        chart.draw();
+      }
     }
   },
 
