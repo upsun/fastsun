@@ -13,8 +13,10 @@ This SPA display CDN manager (Fastly).
 Open on your browser : [https://fastsun.plugins.pltfrm.sh/](https://fastsun.plugins.pltfrm.sh/)
 
 Enter your :
-- FASTLY_ID
-- FASTLY_TOKEN
+- Fastly Service ID
+- Fastly Service Token
+
+You can also install it to access it via the Upsun's console directly with this [link](https://console.upsun.com/-/add-plugin?manifest=https%253A%252F%252Ffastsun.plugins.pltfrm.sh%252Fmanifest.json).
 
 Enjoy !
 
