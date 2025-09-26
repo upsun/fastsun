@@ -4,7 +4,7 @@ This SPA display CDN manager (Fastly).
 
 > [!CAUTION]
 > **This project is owned by the Upsun Advocacy team. It is in early stage of development [experimental] and only intended to be used with caution by Upsun customers/community.   <br /><br />This project is not supported by Upsun and does not qualify for Support plans. Use this repository at your own risks, it is provided without guarantee nor warranty!**  
-> Don’t hesitate to join our [Discord](https://discord.com/invite/platformsh) to share your thoughts about this project.
+> Don’t hesitate to join our [Discord](https://discord.gg/upsun) to share your thoughts about this project.
 
 ## Usage
 
@@ -13,8 +13,10 @@ This SPA display CDN manager (Fastly).
 Open on your browser : [https://fastsun.plugins.pltfrm.sh/](https://fastsun.plugins.pltfrm.sh/)
 
 Enter your :
-- FASTLY_ID
-- FASTLY_TOKEN
+- Fastly Service ID
+- Fastly Service Token
+
+You can also install it to access it via the Upsun's console directly with this [link](https://console.upsun.com/-/add-plugin?manifest=https%253A%252F%252Ffastsun.plugins.pltfrm.sh%252Fmanifest.json).
 
 Enjoy !
 
