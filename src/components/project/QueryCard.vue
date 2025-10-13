@@ -17,6 +17,7 @@ import { formatDateForUrl, parseDateFromUrl, getCurrentMonth, getCurrentPeriod, 
 import { verticalLinePlugin, createHistoricalChartOptions, createChartData } from '@/utils/chartTools';
 import { validateTabValue, validateDateRange } from '@/utils/securityUtils';
 import { usePluginSDK } from 'pluginapp-sdk-node';
+import { scales } from 'chart.js';
 
 // Router setup
 const route = useRoute();
@@ -59,10 +60,6 @@ interface MetricSpec {
    */
   label: string;
   /**
-   * Indicates if the metric is a percentage
-   */
-  isPercent: boolean;
-  /**
    * Conversion factor to apply to the raw metric value
    */
   tooltip?: string;
@@ -74,34 +71,39 @@ interface MetricSpec {
    * Number of decimal places to display
    */
   decimal?: number;
+  /**
+   * Unit to append (e.g., 's', 'B', '%')
+   */
+  unit?: string;
+  /**
+   * Fixed scale to use (e.g., 'k', 'M', 'G', 'T'); if not set, auto-scaling is applied
+   */
+  scale?: string;
 }
 
 const metricsList: Map<MetricKey, MetricSpec> = new Map([
   // Base count metrics
-  [MetricKey.BANDWIDTH, { id: 'bandwidth', label: 'Bandwidth (B)', isPercent: false }],
-  [MetricKey.REQUESTS, { id: 'requests', label: 'Requests', isPercent: false }],
-  [MetricKey.HITS, { id: 'hits', label: 'Hits', isPercent: false }],
-  [MetricKey.PASS, { id: 'pass', label: 'Pass', isPercent: false }],
-  [MetricKey.MISS, { id: 'miss', label: 'Miss', isPercent: false }],
-  [MetricKey.ERRORS, { id: 'errors', label: 'Errors', isPercent: false, tooltip: 'HTTP 5xx+4xx responses' }],
+  [MetricKey.BANDWIDTH, { id: 'bandwidth', label: 'Bandwidth', convert: 1 / 1073741824, unit: 'B', scale: 'G' }],
+  [MetricKey.REQUESTS, { id: 'requests', label: 'Requests' }],
+  [MetricKey.HITS, { id: 'hits', label: 'Hits' }],
+  [MetricKey.PASS, { id: 'pass', label: 'Pass' }],
+  [MetricKey.MISS, { id: 'miss', label: 'Miss' }],
+  [MetricKey.ERRORS, { id: 'errors', label: 'Errors', tooltip: 'HTTP 5xx+4xx responses' }],
 
   // Base percentage metrics
-  [
-    MetricKey.ORIGIN_OFFLOAD,
-    { id: 'origin_offload', label: 'Origin Offload (%)', isPercent: true, convert: 100, decimal: 2 },
-  ],
-  [MetricKey.HIT_RATIO, { id: 'hit_ratio', label: 'Hit Ratio (%)', isPercent: true, decimal: 2 }],
-  [MetricKey.CACHE_COVERAGE, { id: 'cache_coverage', label: 'Cache Coverage (%)', isPercent: true, decimal: 2 }],
+  [MetricKey.ORIGIN_OFFLOAD, { id: 'origin_offload', label: 'Origin Offload', unit: '%', convert: 100, decimal: 2 }],
+  [MetricKey.HIT_RATIO, { id: 'hit_ratio', label: 'Hit Ratio', unit: '%', decimal: 2 }],
+  [MetricKey.CACHE_COVERAGE, { id: 'cache_coverage', label: 'Cache Coverage', unit: '%', decimal: 2 }],
 
   // Extra metrics
-  [MetricKey.ALL_STATUS_2XX, { id: 'all_status_2xx', label: 'All Status 2xx', isPercent: false }],
-  [MetricKey.ALL_STATUS_3XX, { id: 'all_status_3xx', label: 'All Status 3xx', isPercent: false }],
-  [MetricKey.ALL_STATUS_4XX, { id: 'all_status_4xx', label: 'All Status 4xx', isPercent: false }],
-  [MetricKey.ALL_STATUS_5XX, { id: 'all_status_5xx', label: 'All Status 5xx', isPercent: false }],
-  [MetricKey.STATUS_406, { id: 'status_406', label: 'Status 406', isPercent: false }],
-  [MetricKey.STATUS_404, { id: 'status_404', label: 'Status 404', isPercent: false }],
-  [MetricKey.STATUS_429, { id: 'status_429', label: 'Status 429', isPercent: false }],
-  [MetricKey.MISS_TIME, { id: 'miss_time', label: 'Miss Time (ms)', isPercent: false, convert: 0.01, decimal: 2 }],
+  [MetricKey.ALL_STATUS_2XX, { id: 'all_status_2xx', label: 'All Status 2xx' }],
+  [MetricKey.ALL_STATUS_3XX, { id: 'all_status_3xx', label: 'All Status 3xx' }],
+  [MetricKey.ALL_STATUS_4XX, { id: 'all_status_4xx', label: 'All Status 4xx' }],
+  [MetricKey.ALL_STATUS_5XX, { id: 'all_status_5xx', label: 'All Status 5xx' }],
+  [MetricKey.STATUS_406, { id: 'status_406', label: 'Status 406' }],
+  [MetricKey.STATUS_404, { id: 'status_404', label: 'Status 404' }],
+  [MetricKey.STATUS_429, { id: 'status_429', label: 'Status 429' }],
+  [MetricKey.MISS_TIME, { id: 'miss_time', label: 'Miss Time', convert: 0.01, decimal: 2, unit: 'ms' }],
 ]);
 
 // Variable pour stocker les stats cumulées
@@ -141,7 +143,12 @@ const initializeDatesFromUrl = (): [Date, Date] => {
 };
 
 // Initialize mode based on URL dates or default to MONTH
-const initializeModeFromDates = (dateRange: [Date, Date]): string => {
+const initializeModeFromDates = (dateRange: [Date, Date] | null): string => {
+  // Fallback to MONTH if no dateRange provided
+  if (!dateRange || !dateRange[0] || !dateRange[1]) {
+    return DATE_PERIODS.MONTH;
+  }
+
   const [fromDate, toDate] = dateRange;
   const diffInDays = Math.ceil((toDate.getTime() - fromDate.getTime()) / (1000 * 60 * 60 * 24));
 
@@ -156,7 +163,7 @@ const initializeModeFromDates = (dateRange: [Date, Date]): string => {
 };
 
 const dates = ref(initializeDatesFromUrl());
-const selected = ref(initializeModeFromDates(dates.value));
+const selected = ref(initializeModeFromDates(dates.value) || DATE_PERIODS.MONTH);
 const options = ref([
   { label: 'Weekly', value: DATE_PERIODS.WEEK },
   { label: 'Monthly', value: DATE_PERIODS.MONTH },
@@ -351,7 +358,7 @@ const navigatePrevious = () => {
   let newFrom: Date;
   let newTo: Date;
 
-  switch (selected.value) {
+  switch (selected.value || DATE_PERIODS.MONTH) {
     case DATE_PERIODS.WEEK:
       // Move back 1 week
       newFrom = new Date(currentFrom);
@@ -390,7 +397,7 @@ const navigateNext = () => {
   let newFrom: Date;
   let newTo: Date;
 
-  switch (selected.value) {
+  switch (selected.value || DATE_PERIODS.MONTH) {
     case DATE_PERIODS.WEEK:
       // Move forward 1 week
       newFrom = new Date(currentFrom);
@@ -424,7 +431,7 @@ const goToToday = () => {
   const today = new Date();
   let newDates: [Date, Date];
 
-  switch (selected.value) {
+  switch (selected.value || DATE_PERIODS.MONTH) {
     case DATE_PERIODS.WEEK:
       // Get current week (Monday to Sunday)
       const currentDay = today.getDay();
@@ -525,6 +532,11 @@ onMounted(() => {
 
 // Watch for changes in selected period and update dates accordingly
 watch(selected, (newPeriod, oldPeriod) => {
+  // Skip if the period hasn't actually changed (prevent unnecessary updates when clicking the same option)
+  if (newPeriod === oldPeriod) {
+    return;
+  }
+
   if (!dates.value || dates.value.length !== 2 || !dates.value[0] || !dates.value[1]) {
     return;
   }
@@ -566,11 +578,41 @@ interface UrlProps {
 /**
  * Formats a numeric value without decimals and with thousands separator
  */
-function format_int(value: number | string, convert: number = 1, decimal: number = 0): string {
+function format_int(value: number | string, spec: MetricSpec): string {
   if (value === null || value === undefined || isNaN(Number(value))) return '';
 
-  const valueConverted = Number(value) * convert;
-  return valueConverted.toLocaleString('fr-FR', { maximumFractionDigits: decimal });
+  let num: number = Number(value);
+  const unit: string = spec.unit ? spec.unit : '';
+  let scale: string = spec.scale ? spec.scale : '';
+  let convert: number = spec.convert ? spec.convert : 0;
+  let decimal: number = spec.decimal ? spec.decimal : 0;
+
+  // If convert is null, auto-scale
+  if (convert === null) {
+    if (Math.abs(num) >= 1e12) {
+      num = num / 1e12;
+      scale = ' T';
+      decimal = 2;
+    } else if (Math.abs(num) >= 1e9) {
+      num = num / 1e9;
+      scale = ' G';
+      decimal = 2;
+    } else if (Math.abs(num) >= 1e6) {
+      num = num / 1e6;
+      scale = ' M';
+      decimal = 2;
+    } else if (Math.abs(num) >= 1e3) {
+      num = num / 1e3;
+      scale = ' k';
+      decimal = 2;
+    }
+    // else: keep as is, no scale
+  } else {
+    if (!convert || isNaN(convert) || convert === 0) convert = 1;
+    num = num * convert;
+  }
+
+  return num.toLocaleString('fr-FR', { maximumFractionDigits: decimal }) + ' ' + scale + unit;
 }
 
 // Watch URL changes to update dates and mode
@@ -613,7 +655,7 @@ watch(
 
         if (datesAreDifferent) {
           // Update mode based on the date range first
-          selected.value = initializeModeFromDates([fromDate, toDate]);
+          selected.value = initializeModeFromDates([fromDate, toDate]) || DATE_PERIODS.MONTH;
 
           // Force reload of historical data when dates come from external component
           if (!newFrom && !newTo) {
@@ -690,9 +732,9 @@ watch(
       <div class="flex">
         <div class="flex align-items-center">
           <SelectButton v-model="selected" :options="options" optionLabel="label" optionValue="value" />
-          <div v-if="isLoading" class="loading-spinner ml-3">
+          <!-- <div v-if="isLoading" class="loading-spinner ml-3">
             <i class="pi pi-spin pi-spinner" style="font-size: 1.2rem; color: var(--p-primary-color)"></i>
-          </div>
+          </div> -->
         </div>
         <div class="navigation-container push-right">
           <Button
@@ -749,34 +791,35 @@ watch(
             <template #body="slotProps">
               <span v-tooltip.left="slotProps.data.tooltip">
                 {{ slotProps.data.label }}
+                <span v-if="slotProps.data.unit"> ({{ slotProps.data.unit }})</span>
               </span>
             </template>
           </Column>
           <Column field="cumulated" header="Total" sortable style="text-align: right">
             <template #body="slotProps">
-              <span v-if="!slotProps.data.isPercent">
-                {{ format_int(slotProps.data.cumulated, slotProps.data.convert, slotProps.data.decimal) }}
+              <span v-if="slotProps.data.unit !== '%'">
+                {{ format_int(slotProps.data.cumulated, slotProps.data) }}
               </span>
             </template>
           </Column>
           <Column field="avg" header="Average" sortable style="text-align: right">
             <template #body="slotProps">
-              <span>{{ format_int(slotProps.data.avg, slotProps.data.convert, slotProps.data.decimal) }}</span>
+              <span>{{ format_int(slotProps.data.avg, slotProps.data) }}</span>
             </template>
           </Column>
           <Column field="min" header="Min" sortable style="text-align: right">
             <template #body="slotProps">
-              <span>{{ format_int(slotProps.data.min, slotProps.data.convert, slotProps.data.decimal) }}</span>
+              <span>{{ format_int(slotProps.data.min, slotProps.data) }}</span>
             </template>
           </Column>
           <Column field="max" header="Max" sortable style="text-align: right">
             <template #body="slotProps">
-              <span>{{ format_int(slotProps.data.max, slotProps.data.convert, slotProps.data.decimal) }}</span>
+              <span>{{ format_int(slotProps.data.max, slotProps.data) }}</span>
             </template>
           </Column>
           <Column field="percentile95" header="95th Percentile" sortable style="text-align: right">
             <template #body="slotProps">
-              <span>{{ format_int(slotProps.data.percentile95, slotProps.data.convert, slotProps.data.decimal) }}</span>
+              <span>{{ format_int(slotProps.data.percentile95, slotProps.data) }}</span>
             </template>
           </Column>
         </DataTable>
