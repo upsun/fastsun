@@ -53,10 +53,6 @@ routes:
     type: upstream
     upstream: "fastsun:http"
 
-  "https://www.{default}":
-    type: redirect
-    to: "https://{default}/"
-
   "https://{all}/":
     type: upstream
     upstream: "fastsun:http"
