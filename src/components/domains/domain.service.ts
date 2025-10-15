@@ -8,15 +8,11 @@ export default class DomainAPIService extends APIService {
 
   async getDomains(version_id: number): Promise<DomainEntity[]> {
     try {
-      const response = await this.wsClient.get(
-        `service/${this.service_id}/version/${version_id}/domain`,
-      );
+      const response = await this.wsClient.get(`service/${this.service_id}/version/${version_id}/domain`);
       return response.data;
     } catch (error) {
       console.error(error);
       throw error;
     }
   }
-
-
 }

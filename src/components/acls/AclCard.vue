@@ -6,16 +6,15 @@ import Column from 'primevue/column';
 import Dialog from 'primevue/dialog';
 import Button from 'primevue/button';
 import Card from 'primevue/card';
+import ProgressSpinner from 'primevue/progressspinner';
 
 import AclEntriesCard from './AclEntriesCard.vue';
 import AclAPIService from './acl.service';
+import VclAPIService from '../vcl/vcl.service';
 import { useCredentialsStore } from '@/stores/credentialsStore';
 import type AclEntity from './acl.interface';
 import type AclItemEntity from './acl.interface';
-
-/**
- * SECURITY: Uses centralized credentials store instead of props to avoid token exposure
- */
+import { eventBus, EventType } from '@/utils/eventBus';
 
 // Init
 const toast = useToast();
@@ -32,6 +31,7 @@ const acls = ref<AclEntity[]>([]);
 const acl_selected = ref<AclEntity>();
 const deleteAclDialog = ref<boolean>(false);
 const editAclDialog = ref<boolean>(false);
+const isDeleting = ref<boolean>(false);
 
 function refresh() {
   console.log('FastSun > Refresh ACL!');
@@ -48,6 +48,11 @@ function refresh() {
         acls.value.forEach((acl) => {
           console.log(toRaw(acl));
         });
+      }
+
+      // If no ACL exists, display an informational message
+      if (acls.value.length === 0) {
+        console.log('FastSun > No ACLs found, user can create a new one');
       }
 
       acls.value.forEach((acl: AclEntity) => {
@@ -82,9 +87,7 @@ function openAclEditModal() {
 function closeAclEditModal(updated: boolean) {
   editAclDialog.value = false;
   cleanSelected();
-  if (updated) {
-    refresh();
-  }
+  // Refresh is handled by watch on props.vcl_version, no need to call it here
 }
 
 function openAclDeleteModal() {
@@ -98,7 +101,14 @@ function closeAclDeleteModal() {
 function addAcl() {
   console.log('FastSun > Add ACL!');
 
-  cleanSelected();
+  const tempAcl: AclEntity = {
+    id: '', // Empty ID for a new ACL
+    name: '',
+    entries: [] as AclItemEntity[],
+    service_id: credentialsStore.getServiceId(),
+  } as AclEntity;
+
+  setSelected(tempAcl);
   openAclEditModal();
 }
 
@@ -111,20 +121,60 @@ function editAcl(acl: AclEntity) {
 }
 
 function confirmDeleteAcl(acl: AclEntity) {
-  console.log('FastSun > Delete ACL: (check): ' + acl.id);
+  console.log('FastSun > Delete ACL: (check): ' + acl.name);
 
   setSelected(acl);
   openAclDeleteModal();
 }
-function deleteAcl() {
+async function deleteAcl() {
   if (acl_selected.value) {
-    console.log('FastSun > Delete ACL (make): ' + acl_selected.value.id);
+    const aclName = acl_selected.value.name; // Save the name before deletion for the notification toast
+    console.log('FastSun > Delete ACL (make): ' + aclName);
 
-    //TODO call remove API
-    acls.value = acls.value.filter((val: AclEntity) => val.id !== acl_selected.value!.id);
-    closeAclDeleteModal();
+    isDeleting.value = true;
+    try {
+      // Create a new draft version for deletion
+      const vclService = new VclAPIService(credentialsStore.getServiceId(), credentialsStore.getServiceToken());
+      const newVersion = await vclService.cloneVersion(props.vcl_version!.toString());
 
-    toast.add({ severity: 'success', summary: 'Successful', detail: 'ACL Deleted', life: 5000 });
+      // Delete the ACL in the new version using the name
+      const aclService = new AclAPIService(credentialsStore.getServiceId(), credentialsStore.getServiceToken());
+      await aclService.deleteACL(parseInt(newVersion.number), aclName);
+
+      // Validate the new VCL version
+      console.log('FastSun > Validating VCL version:', newVersion.number);
+      await vclService.validate(newVersion.number);
+
+      // Activate the new VCL version
+      console.log('FastSun > Activating VCL version:', newVersion.number);
+      await vclService.activate(newVersion.number);
+
+      // Update the VCL version in the store and notify other components
+      credentialsStore.setVclVersion(parseInt(newVersion.number));
+      eventBus.emit(EventType.VCL_VERSION_CHANGED, parseInt(newVersion.number));
+
+      // Remove locally from the list
+      acls.value = acls.value.filter((val: AclEntity) => val.id !== acl_selected.value!.id);
+      closeAclDeleteModal();
+
+      toast.add({
+        severity: 'success',
+        summary: 'ACL Deleted & Activated!',
+        detail: `ACL "${aclName}" deleted and version ${newVersion.number} activated`,
+        life: 5000,
+      });
+    } catch (error) {
+      console.error('Error deleting ACL:', error);
+      toast.add({
+        severity: 'error',
+        summary: 'Error',
+        detail: 'Failed to delete ACL. Please try again.',
+        life: 5000,
+      });
+    } finally {
+      isDeleting.value = false;
+      closeAclDeleteModal();
+    }
   }
 }
 </script>
@@ -197,14 +247,22 @@ function deleteAcl() {
   />
 
   <Dialog v-model:visible="deleteAclDialog" :style="{ width: '450px' }" header="Confirm" :modal="true">
-    <div class="flex items-center gap-4">
+    <div v-if="!isDeleting" class="flex items-center gap-4">
       <i class="pi pi-exclamation-triangle !text-3xl" />
       <span v-if="acl_selected"
         >Are you sure you want to delete <b>{{ acl_selected.name }}</b
         >?</span
       >
     </div>
-    <template #footer>
+    <div v-else class="flex flex-col items-center gap-4 p-4">
+      <ProgressSpinner style="width: 50px; height: 50px" strokeWidth="4" />
+      <p class="text-center">
+        Deleting ACL and activating new version...
+        <br />
+        <small class="text-gray-500">This may take a few seconds</small>
+      </p>
+    </div>
+    <template #footer v-if="!isDeleting">
       <Button label="No" icon="pi pi-times" text @click="deleteAclDialog = false" />
       <Button label="Yes" icon="pi pi-check" @click="deleteAcl" />
     </template>

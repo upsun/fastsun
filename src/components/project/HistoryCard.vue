@@ -18,10 +18,12 @@ const cache = new UserCache();
 
 onMounted(() => {
   eventBus.on(EventType.LOG_REFRESH, refresh);
+  eventBus.on(EventType.VCL_VERSION_CHANGED, refresh);
 });
 
 onBeforeUnmount(() => {
   eventBus.off(EventType.LOG_REFRESH);
+  eventBus.off(EventType.VCL_VERSION_CHANGED);
 });
 
 // Data
