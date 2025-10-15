@@ -19,9 +19,7 @@ export default class VclAPIService extends APIService {
 
   async validate(version_id: string) {
     try {
-      const response = await this.wsClient.get(
-        `service/${this.service_id}/version/${version_id}/validate`,
-      );
+      const response = await this.wsClient.get(`service/${this.service_id}/version/${version_id}/validate`);
       return response.data;
     } catch (error) {
       console.error(error);
@@ -31,9 +29,7 @@ export default class VclAPIService extends APIService {
 
   async activate(version_id: string) {
     try {
-      const response = await this.wsClient.put(
-        `service/${this.service_id}/version/${version_id}/activate`,
-      );
+      const response = await this.wsClient.put(`service/${this.service_id}/version/${version_id}/activate`);
       return response.data;
     } catch (error) {
       console.error(error);
@@ -46,9 +42,7 @@ export default class VclAPIService extends APIService {
       const responseHtml = await this.wsClient.get(
         `service/${this.service_id}/version/${version_id}/generated_vcl/content`,
       );
-      const responseRaw = await this.wsClient.get(
-        `service/${this.service_id}/version/${version_id}/generated_vcl`,
-      );
+      const responseRaw = await this.wsClient.get(`service/${this.service_id}/version/${version_id}/generated_vcl`);
       return [responseRaw.data, responseHtml.data];
     } catch (error) {
       console.error(error);

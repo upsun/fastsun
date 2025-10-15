@@ -13,7 +13,7 @@ export default abstract class APIService {
     this.service_id = service_id;
 
     if (import.meta.env.VITE_PROXY_USE == 'true') {
-      this.baseUrl = 'api/';                    // Proxy Access
+      this.baseUrl = 'api/'; // Proxy Access
     } else {
       this.baseUrl = 'https://api.fastly.com/'; // Direct Access
     }
@@ -21,7 +21,7 @@ export default abstract class APIService {
     this.headers = {
       'Fastly-Key': token,
       'Content-Type': 'application/json;charset=UTF-8',
-      'Accept': 'application/json',
+      Accept: 'application/json',
     };
 
     // Axios

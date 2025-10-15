@@ -16,7 +16,6 @@ import type AclEntity from './acl.interface';
 import type AclItemEntity from './acl.interface';
 import { eventBus, EventType } from '@/utils/eventBus';
 
-
 // Init
 const toast = useToast();
 const credentialsStore = useCredentialsStore();

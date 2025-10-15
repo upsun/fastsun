@@ -82,7 +82,10 @@ export default class AclAPIService extends APIService {
   async updateACL(version: number, acl_name: string, new_name: string): Promise<AclEntity> {
     try {
       const dto = JSON.stringify({ name: new_name });
-      const response = await this.wsClient.put(`service/${this.service_id}/version/${version}/acl/${encodeURIComponent(acl_name)}`, dto);
+      const response = await this.wsClient.put(
+        `service/${this.service_id}/version/${version}/acl/${encodeURIComponent(acl_name)}`,
+        dto,
+      );
       return response.data;
     } catch (error) {
       console.error(error);

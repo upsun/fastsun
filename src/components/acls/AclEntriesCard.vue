@@ -148,7 +148,7 @@ async function createNewAcl() {
 
     // Step 6: Close modal first, then update the VCL version in the store and notify other components
     closeModal(true);
-    
+
     credentialsStore.setVclVersion(parseInt(newVersion.number));
     eventBus.emit(EventType.VCL_VERSION_CHANGED, parseInt(newVersion.number));
 
