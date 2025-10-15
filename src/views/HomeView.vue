@@ -26,6 +26,7 @@ import { usePluginSDK } from 'pluginapp-sdk-node';
 
 import ProjectAPIService from '@/components/project/project.service';
 import type ProjectEntity from '@/components/project/project.interface';
+import { eventBus, EventType } from '@/utils/eventBus';
 
 // Main components
 const localStore = new LocalStore();
@@ -105,6 +106,9 @@ interface UrlProps {
 onMounted(async () => {
   localStore.checkSchemaVersion();
 
+  // Listen for VCL version changes to refresh globally
+  eventBus.on(EventType.VCL_VERSION_CHANGED, refresh);
+
   const props = await sdk.getUpsunContext();
 
   if (!props) {
@@ -128,7 +132,9 @@ onMounted(async () => {
   console.log('FastSun > Test > Environment ID:', credentialsStore.getEnvironmentId());
 });
 
-onUnmounted(() => {});
+onUnmounted(() => {
+  eventBus.off(EventType.VCL_VERSION_CHANGED);
+});
 
 //// Tab section ////
 

@@ -1,20 +1,19 @@
 <script setup lang="ts">
-import { computed, ref, toRaw, watchEffect, type PropType } from 'vue';
+import { computed, ref, toRaw, watchEffect, nextTick, type PropType } from 'vue';
 import { useToast } from 'primevue/usetoast';
 import DataTable, { type DataTableRowEditSaveEvent } from 'primevue/datatable';
 import Column from 'primevue/column';
 import Dialog from 'primevue/dialog';
 import InputText from 'primevue/inputtext';
+import ProgressSpinner from 'primevue/progressspinner';
 
 import type AclEntity from './acl.interface';
 import type AclItemEntity from './acl.interface';
 import AclAPIService from './acl.service';
+import VclAPIService from '../vcl/vcl.service';
 import { useCredentialsStore } from '@/stores/credentialsStore';
 import LocalStore from '@/stores/localStorage';
-
-/**
- * SECURITY: Uses centralized credentials store instead of props to avoid token exposure
- */
+import { eventBus, EventType } from '@/utils/eventBus';
 
 // Init
 const emit = defineEmits(['update:visible']);
@@ -27,7 +26,7 @@ const props = defineProps({
   },
   acl_state_dialog: {
     type: Boolean,
-    resuired: true,
+    required: true,
   },
 });
 
@@ -40,11 +39,19 @@ const deleteIpDialog = ref<boolean>(false);
 const editingRows = ref([]);
 const idCounter = ref<number>(-1);
 
+// Dynamic name validation
+const nameInputRef = ref<HTMLInputElement>();
+const nameError = ref<string>('');
+const isNameValid = ref<boolean>(true);
+const isSaving = ref<boolean>(false);
+
+// We need to retrieve the current VCL version from the credentialsStore
+const currentVclVersion = credentialsStore.getVclVersion();
+
 const localStore = new LocalStore();
 function refresh() {
   console.log('FastSun > Load ACL: ' + props.acl_data!.id);
 
-  //TODO call remove API
   if (props.acl_data === undefined || Object.keys(props.acl_data).length === 0) {
     headerTitle.value = 'Add ACL';
   } else {
@@ -83,12 +90,90 @@ function onRowEditSave(event: DataTableRowEditSaveEvent) {
   }
 }
 
-function saveACL() {
+async function saveACL() {
   console.log('FastSun > Save ACL: ' + props.acl_data!.id);
-  //TODO Save by API the ACL (create/update)
+  submitted.value = true;
 
-  //// Update Entries.
+  // Dynamic name validation
+  if (!validateName()) {
+    focusNameInput();
+    return;
+  }
+
+  // Check if this is a new ACL (ID is empty or undefined)
+  const isNewAcl = !props.acl_data!.id || props.acl_data!.id === '';
+
+  if (isNewAcl) {
+    await createNewAcl();
+  } else {
+    await updateAclEntries();
+  }
+}
+
+async function createNewAcl() {
+  isSaving.value = true;
+  try {
+    console.log('FastSun > Creating new ACL with draft version...');
+
+    // Step 1: Create a new draft VCL version
+    const vclService = new VclAPIService(credentialsStore.getServiceId(), credentialsStore.getServiceToken());
+    const newVersion = await vclService.cloneVersion(currentVclVersion.toString());
+
+    console.log('FastSun > New draft version created:', newVersion.number);
+
+    // Step 2: Create the ACL in the new version
+    const aclService = new AclAPIService(credentialsStore.getServiceId(), credentialsStore.getServiceToken());
+    const cleanedName = props.acl_data!.name.trim(); // Ensure the name is clean
+    const newAcl = await aclService.createACL(parseInt(newVersion.number), cleanedName);
+
+    console.log('FastSun > New ACL created:', newAcl.id);
+
+    // Step 3: Update the entries if there are any
+    const updated = entries.value.filter((entrie: AclItemEntity) => {
+      return entrie.op != undefined && entrie.op != '';
+    });
+
+    if (updated.length > 0) {
+      await aclService.updateAclEntry(newAcl.id, toRaw(updated));
+      console.log('FastSun > ACL entries updated');
+    }
+
+    // Step 4: Validate the new VCL version
+    console.log('FastSun > Validating VCL version:', newVersion.number);
+    await vclService.validate(newVersion.number);
+
+    // Step 5: Activate the new VCL version
+    console.log('FastSun > Activating VCL version:', newVersion.number);
+    await vclService.activate(newVersion.number);
+
+    // Step 6: Close modal first, then update the VCL version in the store and notify other components
+    closeModal(true);
+    
+    credentialsStore.setVclVersion(parseInt(newVersion.number));
+    eventBus.emit(EventType.VCL_VERSION_CHANGED, parseInt(newVersion.number));
+
+    toast.add({
+      severity: 'success',
+      summary: 'ACL Created & Activated!',
+      detail: `ACL "${props.acl_data!.name}" created and version ${newVersion.number} activated`,
+      life: 5000,
+    });
+  } catch (error) {
+    console.error('Error creating ACL:', error);
+    toast.add({
+      severity: 'error',
+      summary: 'Error Creating ACL',
+      detail: error instanceof Error ? error.message : String(error),
+      life: 5000,
+    });
+  } finally {
+    isSaving.value = false;
+  }
+}
+
+function updateAclEntries() {
   console.log('FastSun > Save ACL entries: ' + props.acl_data!.id);
+
   // Only item to update
   const updated = entries.value.filter((entrie: AclItemEntity) => {
     return entrie.op != undefined && entrie.op != '';
@@ -102,11 +187,21 @@ function saveACL() {
       .updateAclEntry(props.acl_data!.id, toRaw(updated))
       .then(() => {
         closeModal(true);
-        toast.add({ severity: 'success', summary: 'ACL created !', detail: 'Acl Created!\n', life: 5000 });
+        toast.add({
+          severity: 'success',
+          summary: 'ACL saved!',
+          detail: 'ACL entries updated successfully',
+          life: 5000,
+        });
       })
       .catch((error) => {
-        toast.add({ severity: 'error', summary: 'Error Create ACL', detail: error, life: 5000 });
+        console.error('Error updating ACL entries:', error);
+        toast.add({ severity: 'error', summary: 'Error updating ACL', detail: error.message || error, life: 5000 });
       });
+  } else {
+    // No entries to update, just close
+    closeModal(true);
+    toast.add({ severity: 'success', summary: 'ACL saved!', detail: 'ACL configuration saved', life: 5000 });
   }
 }
 
@@ -141,8 +236,7 @@ function confirmDeleteAclEntry(index: number) {
 function deleteIp() {
   if (ip_selected.value != null) {
     console.log('FastSun > Delete IP (make): ' + ip_selected.value.id);
-    //if (ip_selected.value.)
-    //entries.value = entries.value.filter((val) => val.id !== ip_selected.value!.id);
+
     ip_selected.value.op = 'delete';
     closeIpDeleteModal();
   }
@@ -153,6 +247,42 @@ const displayEntries = computed(() => {
     return item.op != 'delete';
   });
 });
+
+// Dynamic name validation
+function validateName() {
+  const name = props.acl_data!.name?.trim() || '';
+
+  if (!name) {
+    nameError.value = 'Name is required';
+    isNameValid.value = false;
+    return false;
+  }
+
+  const namePattern = /^[a-zA-Z][a-zA-Z0-9_\s]*$/;
+  if (!namePattern.test(name)) {
+    nameError.value = 'Name must start with a letter and contain only letters, numbers, underscores, and spaces';
+    isNameValid.value = false;
+    return false;
+  }
+
+  nameError.value = '';
+  isNameValid.value = true;
+  return true;
+}
+
+// Handler for real-time input
+function onNameInput() {
+  validateName();
+}
+
+// Focus on the name field with error
+function focusNameInput() {
+  nextTick(() => {
+    if (nameInputRef.value) {
+      nameInputRef.value.focus();
+    }
+  });
+}
 </script>
 
 <template>
@@ -166,14 +296,22 @@ const displayEntries = computed(() => {
     <div>
       <label for="name" class="block font-bold mb-3">Name</label>
       <InputText
+        ref="nameInputRef"
         id="name"
         v-model.trim="acl_data!.name"
         required="true"
         autofocus
-        :invalid="submitted && !acl_data!.name"
+        :invalid="!isNameValid"
         fluid
+        placeholder="e.g. my_acl_name or My ACL Name"
+        @input="onNameInput"
+        @blur="validateName"
+        :class="{ 'border-red-500 bg-red-50': !isNameValid }"
       />
-      <small v-if="submitted && !acl_data!.name" class="text-red-500">Name is required.</small>
+      <small v-if="nameError" class="text-red-500 block mt-1">{{ nameError }}</small>
+      <small v-else class="text-gray-500 text-sm mt-1 block">
+        Must start with a letter and contain only letters, numbers, underscores, and spaces
+      </small>
     </div>
     <br />
     <div>
@@ -228,10 +366,14 @@ const displayEntries = computed(() => {
         </Column>
       </DataTable>
     </div>
-    <template #footer>
+    <template #footer v-if="!isSaving">
       <Button label="Cancel" icon="pi pi-times" text @click="closeModal(false)" />
       <Button label="Save" icon="pi pi-check" @click="saveACL" />
     </template>
+    <div v-if="isSaving" class="flex items-center justify-center gap-2 p-4">
+      <ProgressSpinner style="width: 30px; height: 30px" strokeWidth="4" />
+      <span>Creating ACL and activating version...</span>
+    </div>
   </Dialog>
 
   <Dialog v-model:visible="deleteIpDialog" :style="{ width: '450px' }" header="Confirm" :modal="true">

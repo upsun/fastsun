@@ -55,4 +55,32 @@ export default class VclAPIService extends APIService {
       throw error;
     }
   }
+
+  /**
+   * Create a new draft version from an existing version
+   * https://www.fastly.com/documentation/reference/api/services/version/#create-service-version
+   */
+  async createDraftVersion(): Promise<VclEntity> {
+    try {
+      const response = await this.wsClient.post(`service/${this.service_id}/version`);
+      return response.data;
+    } catch (error) {
+      console.error(error);
+      throw error;
+    }
+  }
+
+  /**
+   * Clone a version to create a new draft version
+   * https://www.fastly.com/documentation/reference/api/services/version/#clone-service-version
+   */
+  async cloneVersion(version_id: string): Promise<VclEntity> {
+    try {
+      const response = await this.wsClient.put(`service/${this.service_id}/version/${version_id}/clone`);
+      return response.data;
+    } catch (error) {
+      console.error(error);
+      throw error;
+    }
+  }
 }

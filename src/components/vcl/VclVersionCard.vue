@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, toRaw, watchEffect } from 'vue';
+import { ref, toRaw, watchEffect, onMounted, onUnmounted } from 'vue';
 import { useToast } from 'primevue/usetoast';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
@@ -9,6 +9,7 @@ import DisplayVclCard from './VclDisplayCard.vue';
 import VclAPIService from './vcl.service';
 import { useCredentialsStore } from '@/stores/credentialsStore';
 import type VclEntity from './vcl.interface';
+import { eventBus, EventType } from '@/utils/eventBus';
 
 // Init
 const toast = useToast();
@@ -41,6 +42,14 @@ function refresh() {
     });
 }
 watchEffect(refresh);
+
+onMounted(() => {
+  eventBus.on(EventType.VCL_VERSION_CHANGED, refresh);
+});
+
+onUnmounted(() => {
+  eventBus.off(EventType.VCL_VERSION_CHANGED);
+});
 
 // Events
 function openVclDisplayModal() {
