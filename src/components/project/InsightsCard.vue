@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { useToast } from 'primevue/usetoast';
 import Chart from 'primevue/chart';
 import Select from 'primevue/select';
@@ -67,6 +67,17 @@ const insightsData = ref<Record<string, InsightResponse> | null>(null);
 
 /** Chart configurations for each insight metric */
 const charts = ref<Map<string, ChartConfig>>(new Map());
+
+/** Check if insights are disabled (all data arrays are empty) */
+const areInsightsDisabled = computed<boolean>(() => {
+  if (!insightsData.value) return false;
+
+  const allDataArrays = Object.values(insightsData.value);
+  if (allDataArrays.length === 0) return false;
+
+  // Check if all data arrays are empty
+  return allDataArrays.every((response) => !response.data || response.data.length === 0);
+});
 
 /** Time range options */
 const timeRangeOptions = [
@@ -912,6 +923,14 @@ function handleTimeRangeChange() {
           <i class="pi pi-info-circle text-4xl mb-3"></i>
           <p>No insights data available</p>
           <p class="text-sm mt-2">Click refresh to fetch insights</p>
+        </div>
+      </div>
+
+      <div v-else-if="areInsightsDisabled" class="flex justify-center items-center h-[20rem] text-gray-500">
+        <div class="text-center">
+          <i class="pi pi-exclamation-triangle text-4xl mb-3"></i>
+          <p class="font-semibold">Insights Not Enabled</p>
+          <p class="text-sm mt-2">Please reach out to support to enable insights on this service</p>
         </div>
       </div>
 
