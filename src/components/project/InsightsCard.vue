@@ -76,7 +76,7 @@ const areInsightsDisabled = computed<boolean>(() => {
   if (allDataArrays.length === 0) return false;
 
   // Check if all data arrays are empty
-  return allDataArrays.every((response) => !response.data || response.data.length === 0);
+  return allDataArrays.every((response) => response.data?.length === 0);
 });
 
 /** Time range options */
