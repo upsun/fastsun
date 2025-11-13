@@ -930,7 +930,7 @@ function handleTimeRangeChange() {
         <div class="text-center">
           <i class="pi pi-exclamation-triangle text-4xl mb-3"></i>
           <p class="font-semibold">Insights Not Enabled</p>
-          <p class="text-sm mt-2">Please reach out to support to enable insights on this service</p>
+          <p class="text-sm mt-2">Please reach out to support to enable insights on this service.</p>
         </div>
       </div>
 
