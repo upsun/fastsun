@@ -12,6 +12,7 @@ import ProgressSpinner from 'primevue/progressspinner';
 
 import SetupCard from '@/components/SetupCard.vue';
 import AclsCard from '@/components/acls/AclCard.vue';
+import DictionaryCard from '@/components/dictionaries/DictionaryCard.vue';
 import DomaCard from '@/components/domains/DomainCard.vue';
 import HistCard from '@/components/project/HistoryCard.vue';
 import InfoCard from '@/components/project/InfoCard.vue';
@@ -241,6 +242,7 @@ const vclVersionIsDefined = computed(() => credentialsStore.vclVersionIsDefined.
             <VersCard />
             <HistCard />
             <AclsCard :vcl_version="credentialsStore.getVclVersion()" />
+            <DictionaryCard :vcl_version="credentialsStore.getVclVersion()" />
           </TabPanel>
           <TabPanel :value="TAB_VALUES.HISTORY">
             <QueryCard />
