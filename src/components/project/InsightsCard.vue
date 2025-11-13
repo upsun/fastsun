@@ -65,6 +65,9 @@ const lock = ref<boolean>(false);
 /** Store the insights data */
 const insightsData = ref<Record<string, InsightResponse> | null>(null);
 
+/** Track whether insights are enabled for this service */
+const isInsightsEnabled = ref<boolean | null>(null);
+
 /** Chart configurations for each insight metric */
 const charts = ref<Map<string, ChartConfig>>(new Map());
 
@@ -98,11 +101,27 @@ const visualizations = [
 ];
 
 /**
- * Component lifecycle hook - fetches initial data when component is mounted
+ * Component lifecycle hook - checks insights enablement and fetches initial data when component is mounted
  */
-onMounted(() => {
-  fetchInsights();
+onMounted(async () => {
+  await checkInsightsEnabledStatus();
+  if (isInsightsEnabled.value) {
+    fetchInsights();
+  }
 });
+
+/**
+ * Checks if insights are enabled for this service
+ */
+async function checkInsightsEnabledStatus() {
+  try {
+    const projectService = new ProjectAPIService(credentialsStore.getServiceId(), credentialsStore.getServiceToken());
+    isInsightsEnabled.value = await projectService.checkInsightsEnabled();
+  } catch (error) {
+    console.error('Error checking insights enabled status:', error);
+    isInsightsEnabled.value = false;
+  }
+}
 
 /**
  * Calculates start and end times based on selected time range
@@ -866,19 +885,23 @@ function getColorForIndex(index: number, alpha: number = 1): string {
  * Manual refresh handler
  */
 function handleRefresh() {
-  fetchInsights();
+  if (isInsightsEnabled.value) {
+    fetchInsights();
+  }
 }
 
 /**
  * Handle time range change
  */
 function handleTimeRangeChange() {
-  fetchInsights();
+  if (isInsightsEnabled.value) {
+    fetchInsights();
+  }
 }
 </script>
 
 <template>
-  <Card>
+  <Card v-if="isInsightsEnabled">
     <template #title>
       <div class="flex items-center justify-between w-full">
         <span>Insights</span>
