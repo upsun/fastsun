@@ -16,6 +16,7 @@ import DomaCard from '@/components/domains/DomainCard.vue';
 import HistCard from '@/components/project/HistoryCard.vue';
 import InfoCard from '@/components/project/InfoCard.vue';
 import StatCard from '@/components/project/StatCard.vue';
+import InsightsCard from '@/components/project/InsightsCard.vue';
 import QueryCard from '@/components/project/QueryCard.vue';
 import VersCard from '@/components/vcl/VclVersionCard.vue';
 
@@ -236,6 +237,7 @@ const vclVersionIsDefined = computed(() => credentialsStore.vclVersionIsDefined.
             />
             <DomaCard :vcl_version="credentialsStore.getVclVersion()" />
             <StatCard />
+            <InsightsCard />
             <VersCard />
             <HistCard />
             <AclsCard :vcl_version="credentialsStore.getVclVersion()" />

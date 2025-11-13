@@ -124,4 +124,45 @@ export default class ProjectAPIService extends APIService {
       throw error;
     }
   }
+
+  async getInsights(startTime?: string, endTime?: string, visualization?: string) {
+    try {
+      // Default to last hour if not specified
+      const now = new Date();
+      const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+
+      const defaultStartTime = oneHourAgo.toISOString();
+      const defaultEndTime = now.toISOString();
+
+      // Build parameters object
+      const paramsObj: Record<string, string> = {
+        service_id: this.service_id,
+        start_time: startTime || defaultStartTime,
+        end_time: endTime || defaultEndTime,
+        visualization: visualization || 'top-url-by-bandwidth', // Default to specific visualization
+      };
+
+      // Validate time parameters
+      const validatedStartTime = validateApiParam(paramsObj.start_time);
+      const validatedEndTime = validateApiParam(paramsObj.end_time);
+      const validatedVisualization = validateApiParam(paramsObj.visualization);
+
+      if (!validatedStartTime || !validatedEndTime || !validatedVisualization) {
+        throw new Error('Invalid parameters');
+      }
+
+      paramsObj.start_time = validatedStartTime;
+      paramsObj.end_time = validatedEndTime;
+      paramsObj.visualization = validatedVisualization;
+
+      // Use secure URL building
+      const params = createSecureSearchParams(paramsObj);
+
+      const response = await this.wsClient.get(`observability/log-insights?${params.toString()}`);
+      return response.data;
+    } catch (error) {
+      console.error(error);
+      throw error;
+    }
+  }
 }
