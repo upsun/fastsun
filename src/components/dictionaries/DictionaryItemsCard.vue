@@ -184,7 +184,7 @@ function updateDictionaryItems() {
 
   // Only items to update
   const updated = items.value.filter((item: DictionaryItemEntity) => {
-    return item.op != undefined && item.op != '';
+    return item.op !== undefined && item.op !== '';
   });
 
   // Call API for items
