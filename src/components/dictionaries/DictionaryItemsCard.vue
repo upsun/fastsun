@@ -8,8 +8,7 @@ import InputText from 'primevue/inputtext';
 import Checkbox from 'primevue/checkbox';
 import ProgressSpinner from 'primevue/progressspinner';
 
-import type DictionaryEntity from './dictionary.interface';
-import type DictionaryItemEntity from './dictionary.interface';
+import type { DictionaryEntity, DictionaryItemEntity } from './dictionary.interface';
 import DictionaryAPIService from './dictionary.service';
 import VclAPIService from '../vcl/vcl.service';
 import { useCredentialsStore } from '@/stores/credentialsStore';
