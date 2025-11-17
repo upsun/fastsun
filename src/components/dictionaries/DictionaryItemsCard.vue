@@ -138,7 +138,7 @@ async function createNewDictionary() {
 
     // Step 3: Update the items if there are any
     const updated = items.value.filter((item: DictionaryItemEntity) => {
-      return item.op != undefined && item.op != '';
+      return item.op !== undefined && item.op !== '';
     });
 
     if (updated.length > 0) {
