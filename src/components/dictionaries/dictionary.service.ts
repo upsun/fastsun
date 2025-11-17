@@ -1,6 +1,5 @@
 import APIService from '../base/api';
-import type DictionaryItemEntity from './dictionary.interface';
-import type DictionaryEntity from './dictionary.interface';
+import type { DictionaryEntity, DictionaryItemEntity } from './dictionary.interface';
 
 export type APIResponse = [null, null] | [Error];
 
