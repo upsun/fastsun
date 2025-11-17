@@ -85,7 +85,7 @@ function onRowEditSave(event: DataTableRowEditSaveEvent) {
   if (isEdited(data, newData)) {
     items.value[index] = newData;
 
-    if (data.op == undefined || data.op == '') {
+    if (data.op === undefined || data.op === '') {
       newData.op = 'update';
     }
   }
