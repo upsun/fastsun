@@ -258,7 +258,7 @@ function deleteItem() {
 
 const displayItems = computed(() => {
   return items.value.filter((item) => {
-    return item.op != 'delete';
+    return item.op !== 'delete';
   });
 });
 
