@@ -12,8 +12,7 @@ import DictionaryItemsCard from './DictionaryItemsCard.vue';
 import DictionaryAPIService from './dictionary.service';
 import VclAPIService from '../vcl/vcl.service';
 import { useCredentialsStore } from '@/stores/credentialsStore';
-import type DictionaryEntity from './dictionary.interface';
-import type DictionaryItemEntity from './dictionary.interface';
+import type { DictionaryEntity, DictionaryItemEntity } from './dictionary.interface';
 import { eventBus, EventType } from '@/utils/eventBus';
 
 // Init

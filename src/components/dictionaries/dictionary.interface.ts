@@ -6,7 +6,7 @@ export interface DictionaryItemEntity extends Identifiable {
   op: string;
 }
 
-export default interface DictionaryEntity extends Identifiable {
+export interface DictionaryEntity extends Identifiable {
   name: string;
   write_only: boolean;
   items: DictionaryItemEntity[];
