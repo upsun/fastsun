@@ -901,7 +901,7 @@ function handleTimeRangeChange() {
 </script>
 
 <template>
-  <Card v-if="isInsightsEnabled">
+  <Card v-if="isInsightsEnabled === true">
     <template #title>
       <div class="flex items-center justify-between w-full">
         <span>Insights</span>
