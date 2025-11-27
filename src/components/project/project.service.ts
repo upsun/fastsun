@@ -165,4 +165,15 @@ export default class ProjectAPIService extends APIService {
       throw error;
     }
   }
+
+  async checkInsightsEnabled(): Promise<boolean> {
+    try {
+      const response = await this.wsClient.get(`enabled-products/v1/log_explorer_insights/services/${this.service_id}`);
+      return response.status === 200 && response.data?.product?.id === 'log_explorer_insights';
+    } catch (error) {
+      // If we get a 404 or any error, insights are not enabled
+      console.error('Insights not enabled for this service:', error);
+      return false;
+    }
+  }
 }
