@@ -61,7 +61,7 @@ function saveId() {
     <template #title>Setup Fastly Credentials</template>
     <template #content>
       <div class="setupcard-explanation text-sm text-gray-700">
-        Your Fastly credentials are stored securely within your browser and are never transmitted to Upsun.<br />
+        Your Fastly credentials are stored securely within your browser and solely transmitted to https://fastsun.plugins.pltfrm.sh/ hosted on Upsun.<br />
         This method enhances security by ensuring that your credentials are not shared with any third parties, thereby
         reducing the risk of unauthorized access.<br />
         Please note that if you access Upsun from a different browser or device, you will be required to re-enter your
