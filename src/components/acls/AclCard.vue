@@ -87,7 +87,9 @@ function openAclEditModal() {
 function closeAclEditModal(updated: boolean) {
   editAclDialog.value = false;
   cleanSelected();
-  // Refresh is handled by watch on props.vcl_version, no need to call it here
+  if (updated) {
+    refresh();
+  }
 }
 
 function openAclDeleteModal() {
