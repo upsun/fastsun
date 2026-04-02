@@ -83,7 +83,7 @@ interface MetricSpec {
 
 const metricsList: Map<MetricKey, MetricSpec> = new Map([
   // Base count metrics
-  [MetricKey.BANDWIDTH, { id: 'bandwidth', label: 'Bandwidth', convert: 1 / 1073741824, unit: 'B', scale: 'G' }],
+  [MetricKey.BANDWIDTH, { id: 'bandwidth', label: 'Bandwidth', convert: 1 / 1000000000, unit: 'B', scale: 'G' }],
   [MetricKey.REQUESTS, { id: 'requests', label: 'Requests' }],
   [MetricKey.HITS, { id: 'hits', label: 'Hits' }],
   [MetricKey.PASS, { id: 'pass', label: 'Pass' }],
