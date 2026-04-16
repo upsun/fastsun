@@ -10,6 +10,8 @@ class CredentialsStore {
   private _projectId = ref<string>('');
   private _environmentId = ref<string>('');
   private _vclVersion = ref<number>(-1);
+  // Initialized from sessionStorage so the value is ready before any component mounts
+  private _logoutReason = ref<string>(sessionStorage.getItem('fastcdn-logout-reason') ?? '');
 
   private localStore = new LocalStore();
 
@@ -55,6 +57,18 @@ class CredentialsStore {
     if (credentials) {
       this._serviceId.value = credentials.fastlyId;
       this._serviceToken.value = credentials.fastlyToken;
+
+      // serviceId loaded but token is empty (failed to decrypt or corrupted).
+      // No API call will be made so no 401 will be caught — set the reason here directly.
+      if (credentials.fastlyId && !credentials.fastlyToken) {
+        console.warn('FastSun > loadCredentials: serviceId present but token empty after decrypt');
+        this.setLogoutReason(
+          'Your Fastly token could not be loaded (possibly after a key rotation or browser migration). Please re-enter your credentials.',
+        );
+      } else if (credentials.fastlyId && credentials.fastlyToken) {
+        // Credentials loaded successfully — clear any previous reason
+        this.clearLogoutReason();
+      }
     } else {
       this._serviceId.value = '';
       this._serviceToken.value = '';
@@ -69,13 +83,32 @@ class CredentialsStore {
         this._serviceId.value,
         this._serviceToken.value,
       );
+      this.clearLogoutReason();
     }
   }
-
   clearCredentials() {
     this._serviceId.value = '';
     this._serviceToken.value = '';
     this._vclVersion.value = -1;
+  }
+
+  logout() {
+    this.localStore.resetFastly(this._projectId.value, this._environmentId.value);
+    this.clearCredentials();
+  }
+
+  setLogoutReason(reason: string) {
+    this._logoutReason.value = reason;
+    this.localStore.setLogoutReason(reason);
+  }
+
+  getLogoutReason(): string {
+    return this._logoutReason.value;
+  }
+
+  clearLogoutReason() {
+    this._logoutReason.value = '';
+    this.localStore.clearLogoutReason();
   }
 
   // Safe getters that don't expose the actual tokens
