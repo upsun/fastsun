@@ -72,7 +72,25 @@ function refresh() {
       }
     })
     .catch((error) => {
-      toast.add({ severity: 'error', summary: 'Error', detail: error, life: 5000 });
+      // Verbose log so we can trace the error shape in browser devtools
+      console.warn('FastSun > API Error shape:', {
+        status: error?.response?.status,
+        errorStatus: error?.status,
+        message: error?.message,
+        error,
+      });
+
+      const is401 =
+        error?.response?.status === 401 || error?.status === 401 || String(error?.message ?? '').includes('401');
+
+      if (is401) {
+        credentialsStore.setLogoutReason(
+          'Your Fastly token is no longer valid (401). It may have been rotated or revoked. Please update your credentials.',
+        );
+        credentialsStore.logout();
+      } else {
+        toast.add({ severity: 'error', summary: 'Error', detail: error?.message ?? error, life: 5000 });
+      }
     });
 }
 
@@ -249,6 +267,14 @@ const vclVersionIsDefined = computed(() => credentialsStore.vclVersionIsDefined.
           </TabPanel>
         </TabPanels>
       </Tabs>
+    </div>
+
+    <!-- Credentials valid but VCL version not yet loaded (loading after login) -->
+    <div v-else class="loading-container">
+      <div class="loading-content">
+        <ProgressSpinner style="width: 60px; height: 60px" strokeWidth="4" fill="transparent" animationDuration="1s" />
+        <p class="loading-text">Connecting to Fastly...</p>
+      </div>
     </div>
   </main>
 </template>
