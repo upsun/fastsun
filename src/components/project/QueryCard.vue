@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ref, onMounted, watch, nextTick } from 'vue';
+import { ref, computed, onMounted, watch, nextTick } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import Select from 'primevue/select';
 import SelectButton from 'primevue/selectbutton';
 import DatePicker from 'primevue/datepicker';
 import Card from 'primevue/card';
@@ -8,24 +9,38 @@ import Chart from 'primevue/chart';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import Button from 'primevue/button';
+import { useToast } from 'primevue/usetoast';
 import 'chartjs-adapter-date-fns';
 
 import { useCredentialsStore } from '@/stores/credentialsStore';
 import ProjectAPIService from './project.service';
 import { TAB_VALUES, type TabValue } from '@/utils/tabsTools';
-import { formatDateForUrl, parseDateFromUrl, getCurrentMonth, getCurrentPeriod, DATE_PERIODS } from '@/utils/dateTools';
-import { verticalLinePlugin, createHistoricalChartOptions, createChartData } from '@/utils/chartTools';
-import { validateTabValue, validateDateRange } from '@/utils/securityUtils';
+import { validateDateRange } from '@/utils/securityUtils';
+import {
+  formatDateForUrl,
+  parseDateFromUrl,
+  toDisplayTimestamp,
+  toWallClockDate,
+  fromWallClock,
+  displayUnitForSpan,
+  TIME_ZONES,
+  type TimeZoneMode,
+} from '@/utils/dateTools';
+import {
+  verticalLinePlugin,
+  createHistoricalChartOptions,
+  createChartData,
+  createStatusDatasets,
+  createStatusDetailDatasets,
+  createBandwidthDatasets,
+} from '@/utils/chartTools';
 import { usePluginSDK } from 'pluginapp-sdk-node';
-import { scales } from 'chart.js';
 
-// Router setup
+// Router / dependencies
 const route = useRoute();
 const router = useRouter();
-
-// Initialize dependencies and constants
 const credentialsStore = useCredentialsStore();
-
+const toast = useToast();
 const { sdk } = usePluginSDK();
 
 // Metrics to display
@@ -40,6 +55,7 @@ enum MetricKey {
   HIT_RATIO,
   CACHE_COVERAGE,
 
+  ALL_STATUS_1XX,
   ALL_STATUS_2XX,
   ALL_STATUS_3XX,
   ALL_STATUS_4XX,
@@ -96,6 +112,7 @@ const metricsList: Map<MetricKey, MetricSpec> = new Map([
   [MetricKey.CACHE_COVERAGE, { id: 'cache_coverage', label: 'Cache Coverage', unit: '%', decimal: 2 }],
 
   // Extra metrics
+  [MetricKey.ALL_STATUS_1XX, { id: 'all_status_1xx', label: 'All Status 1xx' }],
   [MetricKey.ALL_STATUS_2XX, { id: 'all_status_2xx', label: 'All Status 2xx' }],
   [MetricKey.ALL_STATUS_3XX, { id: 'all_status_3xx', label: 'All Status 3xx' }],
   [MetricKey.ALL_STATUS_4XX, { id: 'all_status_4xx', label: 'All Status 4xx' }],
@@ -117,78 +134,337 @@ interface MetricDisplay extends MetricSpec {
 
 const cumulatedStat = ref<MetricDisplay[]>([]);
 
-// Initialize dates from URL parameters or default to current month
-const initializeDatesFromUrl = (): [Date, Date] => {
-  // Only load dates from URL if we're on the History tab
-  const currentTab = Array.isArray(route.query.tab) ? route.query.tab[0] : route.query.tab;
-  const validatedTab = validateTabValue(currentTab);
+//// Controls (mirrors Fastly's "Data Resolution" + "Time Range" + timezone) ////
 
-  if (validatedTab !== TAB_VALUES.HISTORY) {
-    return getCurrentMonth();
+type Resolution = 'minute' | 'hour' | 'day';
+
+const RESOLUTIONS: { label: string; value: Resolution }[] = [
+  { label: 'Minute', value: 'minute' },
+  { label: 'Hour', value: 'hour' },
+  { label: 'Day', value: 'day' },
+];
+
+// Which family of metrics the chart graphs.
+type ViewMode = 'cache' | 'status' | 'status3xx' | 'status4xx' | 'status5xx' | 'bandwidth';
+const VIEW_OPTIONS: { label: string; value: ViewMode }[] = [
+  { label: 'Cache', value: 'cache' },
+  { label: 'HTTP Status', value: 'status' },
+  { label: 'Status 3xx', value: 'status3xx' },
+  { label: 'Status 4xx', value: 'status4xx' },
+  { label: 'Status 5xx', value: 'status5xx' },
+  { label: 'Bandwidth', value: 'bandwidth' },
+];
+const viewMode = ref<ViewMode>('cache');
+// Stacked bar views (status aggregate + per-class drill-downs); the rest are line/area charts.
+const STACKED_VIEWS: ViewMode[] = ['status', 'status3xx', 'status4xx', 'status5xx'];
+const chartType = computed(() => (STACKED_VIEWS.includes(viewMode.value) ? 'bar' : 'line'));
+
+// Rolling time-range presets (each ends at "now"), plus a Custom option.
+const TIME_RANGES: { label: string; value: string; ms: number }[] = [
+  { label: '5 minutes', value: '5m', ms: 5 * 60_000 },
+  { label: '15 minutes', value: '15m', ms: 15 * 60_000 },
+  { label: '30 minutes', value: '30m', ms: 30 * 60_000 },
+  { label: '1 hour', value: '1h', ms: 60 * 60_000 },
+  { label: '4 hours', value: '4h', ms: 4 * 60 * 60_000 },
+  { label: '1 day', value: '1d', ms: 24 * 60 * 60_000 },
+  { label: '1 week', value: '1w', ms: 7 * 24 * 60 * 60_000 },
+  { label: '1 month', value: '1mo', ms: 30 * 24 * 60 * 60_000 },
+  { label: 'Custom', value: 'custom', ms: 0 },
+];
+
+const TIMEZONE_OPTIONS: { label: string; value: TimeZoneMode }[] = [
+  { label: 'UTC', value: TIME_ZONES.UTC },
+  { label: 'Local', value: TIME_ZONES.LOCAL },
+];
+
+// Fastly rejects "exceedingly large" queries, and minute data is only kept for
+// the last 35 days. These guards keep resolution/range combinations valid.
+const STEP_MS: Record<Resolution, number> = { minute: 60_000, hour: 3_600_000, day: 86_400_000 };
+const MAX_BUCKETS = 5000;
+// A resolution coarser than this (fewer buckets) leaves nothing meaningful to
+// plot (e.g. Day over a 1-day range = a single bucket), so it is disabled.
+const MIN_BUCKETS = 2;
+const MINUTE_RETENTION_MS = 35 * 86_400_000;
+
+const resolution = ref<Resolution>('minute');
+const timeRange = ref<string>('1d');
+const timezone = ref<TimeZoneMode>(TIME_ZONES.UTC);
+
+// Working values for the custom From/To pickers (wall-clock in the selected tz).
+const customFrom = ref<Date>(new Date(Date.now() - 86_400_000));
+const customTo = ref<Date>(new Date());
+// The custom range actually applied (real epoch ms), set on "Apply".
+const appliedCustom = ref<[number, number] | null>(null);
+
+const isLoading = ref(false);
+// Guard to avoid watchers firing loads during initial hydration.
+const initializing = ref(true);
+// Guard to batch multi-field state changes (zoom in/out) into a single reload.
+const suppressWatchers = ref(false);
+
+// Drag-to-zoom: stack of prior selections so "Reset zoom" can step back out.
+const MIN_ZOOM_SPAN_MS = 2 * 60_000;
+interface ZoomSnapshot {
+  timeRange: string;
+  appliedCustom: [number, number] | null;
+  resolution: Resolution;
+}
+const zoomStack = ref<ZoomSnapshot[]>([]);
+
+// Stores the applied custom range rounded to whole seconds — the same precision
+// the URL round-trips through (formatDateForUrl floors to seconds). Keeping them
+// aligned lets the external-route watcher's dedup match and avoids a redundant
+// second reload after a drag-zoom / Apply.
+function setAppliedCustom(fromMs: number, toMs: number) {
+  appliedCustom.value = [Math.floor(fromMs / 1000) * 1000, Math.floor(toMs / 1000) * 1000];
+}
+
+/** Resolves the effective [from, to] epoch range (ms) for the current selection. */
+function computeRange(): [number, number] {
+  if (timeRange.value === 'custom') {
+    if (appliedCustom.value) return appliedCustom.value;
+    const now = Date.now();
+    return [now - 86_400_000, now];
   }
+  const preset = TIME_RANGES.find((r) => r.value === timeRange.value);
+  const span = preset?.ms || 86_400_000;
+  const now = Date.now();
+  return [now - span, now];
+}
 
-  const fromParam = Array.isArray(route.query.from) ? route.query.from[0] : route.query.from;
-  const toParam = Array.isArray(route.query.to) ? route.query.to[0] : route.query.to;
+/** Number of data buckets a resolution would produce over a span. */
+function bucketsFor(res: Resolution, span: number): number {
+  return span / STEP_MS[res];
+}
 
-  if (fromParam && toParam && typeof fromParam === 'string' && typeof toParam === 'string') {
-    const fromDate = parseDateFromUrl(fromParam);
-    const toDate = parseDateFromUrl(toParam);
+// Resolutions offered for the current range, disabling combinations that would
+// exceed Fastly's query-size limit or the minute-data retention window.
+const resolutionOptions = computed(() => {
+  const [from, to] = computeRange();
+  const span = to - from;
+  const now = Date.now();
+  return RESOLUTIONS.map((r) => {
+    const buckets = bucketsFor(r.value, span);
+    let disabled = buckets > MAX_BUCKETS || buckets < MIN_BUCKETS;
+    if (r.value === 'minute' && from < now - MINUTE_RETENTION_MS) disabled = true;
+    return { ...r, disabled };
+  });
+});
 
-    if (fromDate && toDate && validateDateRange(fromDate, toDate)) {
-      return [fromDate, toDate];
+/**
+ * Ensures the selected resolution is valid for the current range; if not,
+ * falls back to the finest available one. Returns true if it changed the value.
+ */
+function ensureValidResolution(): boolean {
+  const opts = resolutionOptions.value;
+  const current = opts.find((o) => o.value === resolution.value);
+  if (current && current.disabled) {
+    // Prefer the finest enabled resolution; if none qualifies (e.g. an extreme
+    // span), fall back to the coarsest (fewest buckets) to avoid an oversized query.
+    const target = opts.find((o) => !o.disabled) ?? opts[opts.length - 1];
+    if (target && target.value !== resolution.value) {
+      resolution.value = target.value;
+      return true;
     }
   }
+  return false;
+}
 
-  return getCurrentMonth();
+//// Chart ////
+
+// chartData is a deliberately plain (non-reactive) object: Chart.js keeps this
+// exact reference, renderChart() mutates it in place and calls chart.update()
+// directly, and view/option/type changes drive a PrimeVue re-init that reads the
+// mutated object. It must NOT be wrapped in ref()/reactive() (that re-introduces
+// the Vue-proxy recursion the drag-zoom work had to remove).
+//
+// Hide always-on point markers (dense per-minute views get noisy); the hovered
+// point still re-appears via pointHoverRadius, so tooltips keep working.
+const POINT_OVERRIDES = { pointRadius: 0, pointHoverRadius: 4 };
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const chartData: any = createChartData(6, POINT_OVERRIDES);
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const cacheDatasets = chartData.datasets as any[];
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const statusDatasets = createStatusDatasets(6, POINT_OVERRIDES) as any[];
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const bandwidthDatasets = createBandwidthDatasets(6, POINT_OVERRIDES) as any[];
+
+// Per-class status drill-downs: specific codes plus an "Other Nxx" remainder
+// (class total minus the explicit codes), stacked like the Fastly detail views.
+type DetailView = 'status3xx' | 'status4xx' | 'status5xx';
+const OTHER_COLOR = '#FFC107';
+const STATUS_DETAIL: Record<DetailView, { total: string; series: { code: string; label: string; color: string }[] }> = {
+  status3xx: {
+    total: '3xx',
+    series: [
+      { code: '301', label: '301', color: '#2196F3' },
+      { code: '302', label: '302', color: '#4CAF50' },
+      { code: '304', label: '304', color: '#EC4899' },
+    ],
+  },
+  status4xx: {
+    total: '4xx',
+    series: [
+      { code: '400', label: '400', color: '#2196F3' },
+      { code: '401', label: '401', color: '#4CAF50' },
+      { code: '403', label: '403', color: '#EC4899' },
+      { code: '404', label: '404', color: '#9C27B0' },
+      { code: '406', label: '406', color: '#00BCD4' },
+      { code: '416', label: '416', color: '#795548' },
+      { code: '429', label: '429', color: '#F44336' },
+    ],
+  },
+  status5xx: {
+    total: '5xx',
+    series: [
+      { code: '500', label: '500', color: '#2196F3' },
+      { code: '501', label: '501', color: '#4CAF50' },
+      { code: '502', label: '502', color: '#EC4899' },
+      { code: '503', label: '503', color: '#9C27B0' },
+      { code: '504', label: '504', color: '#00BCD4' },
+      { code: '505', label: '505', color: '#795548' },
+      { code: '530', label: '530', color: '#607D8B' },
+    ],
+  },
 };
 
-// Initialize mode based on URL dates or default to MONTH
-const initializeModeFromDates = (dateRange: [Date, Date] | null): string => {
-  // Fallback to MONTH if no dateRange provided
-  if (!dateRange || !dateRange[0] || !dateRange[1]) {
-    return DATE_PERIODS.MONTH;
-  }
+// Individual status codes captured per data point (union across all classes).
+const INDIVIDUAL_STATUS_CODES = (['status3xx', 'status4xx', 'status5xx'] as DetailView[]).flatMap((v) =>
+  STATUS_DETAIL[v].series.map((s) => s.code),
+);
 
-  const [fromDate, toDate] = dateRange;
-  const diffInDays = Math.ceil((toDate.getTime() - fromDate.getTime()) / (1000 * 60 * 60 * 24));
-
-  // Determine mode based on date range duration
-  if (diffInDays <= 7) {
-    return DATE_PERIODS.WEEK;
-  } else if (diffInDays <= 31) {
-    return DATE_PERIODS.MONTH;
-  } else {
-    return DATE_PERIODS.YEAR;
-  }
-};
-
-const dates = ref(initializeDatesFromUrl());
-const selected = ref(initializeModeFromDates(dates.value) || DATE_PERIODS.MONTH);
-const options = ref([
-  { label: 'Weekly', value: DATE_PERIODS.WEEK },
-  { label: 'Monthly', value: DATE_PERIODS.MONTH },
-  { label: 'Yearly', value: DATE_PERIODS.YEAR },
-]);
-
-const chartOptions = ref(createHistoricalChartOptions('day', 1));
-
-// Loading state for API calls
-const isLoading = ref(false);
-
-// Flag to track when loading from external component
-const isLoadingFromExternal = ref(false);
-
-const chartData = createChartData(6);
-
+function buildDetailDatasets(view: DetailView) {
+  const cfg = STATUS_DETAIL[view];
+  const series = [
+    ...cfg.series.map((s) => ({ label: s.label, color: s.color })),
+    { label: `Other ${cfg.total}`, color: OTHER_COLOR },
+  ];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return createStatusDetailDatasets(series, 6, POINT_OVERRIDES) as any[];
+}
+const status3xxDatasets = buildDetailDatasets('status3xx');
+const status4xxDatasets = buildDetailDatasets('status4xx');
+const status5xxDatasets = buildDetailDatasets('status5xx');
+const chartOptions = ref(createHistoricalChartOptions('hour', 1, 'Time (UTC)'));
 /** Reference to the Chart component instance */
 const chartInstance = ref();
 
-// Function to load historical data - extracted from onMounted to be reusable
-const loadHistoricalData = async (forceDates?: [Date, Date]) => {
-  const activeDates = forceDates || dates.value;
+interface RawPoint {
+  t: number;
+  requests: number;
+  hits: number;
+  pass: number;
+  miss: number;
+  errors: number;
+  origin_offload: number;
+  hit_ratio: number;
+  cache_coverage: number;
+  // HTTP status-code counts (1xx..5xx)
+  s1: number;
+  s2: number;
+  s3: number;
+  s4: number;
+  s5: number;
+  // Bandwidth in bytes: edge (delivered to clients) and origin (received from origin)
+  bwEdge: number;
+  bwOrigin: number;
+  // Number of requests sent to origin
+  originFetches: number;
+  // Per-code status counts + class totals ('3xx'/'4xx'/'5xx') for the drill-down views
+  statuses: Record<string, number>;
+}
 
-  if (!activeDates || activeDates.length !== 2 || !activeDates[0] || !activeDates[1]) {
-    return; // No valid date range selected
+// Raw (timezone-independent) data points backing the chart.
+const rawData = ref<RawPoint[]>([]);
+
+function axisTitle(): string {
+  return `Time (${timezone.value === TIME_ZONES.UTC ? 'UTC' : 'Local'})`;
+}
+
+function updateAxis() {
+  const [from, to] = computeRange();
+  const stacked = STACKED_VIEWS.includes(viewMode.value);
+  const isBandwidth = viewMode.value === 'bandwidth';
+  const options = createHistoricalChartOptions(
+    displayUnitForSpan(to - from),
+    1,
+    axisTitle(),
+    stacked,
+    isBandwidth ? 'B' : '',
+    isBandwidth ? 'Bandwidth' : 'Count',
+  );
+  chartOptions.value = options;
+}
+
+// Rebuilds the chart datasets from rawData for the current view, applying the tz transform.
+function renderChart() {
+  if (!chartInstance.value || !chartInstance.value.chart) return;
+  const chart = chartInstance.value.chart;
+  chart.resize();
+
+  const view = viewMode.value;
+  const isDetail = view === 'status3xx' || view === 'status4xx' || view === 'status5xx';
+  let datasets: typeof cacheDatasets;
+  if (view === 'status') datasets = statusDatasets;
+  else if (view === 'bandwidth') datasets = bandwidthDatasets;
+  else if (view === 'status3xx') datasets = status3xxDatasets;
+  else if (view === 'status4xx') datasets = status4xxDatasets;
+  else if (view === 'status5xx') datasets = status5xxDatasets;
+  else datasets = cacheDatasets;
+  // Swap the active dataset set (kept on the shared chartData so a chart
+  // re-init triggered by type/option changes stays consistent).
+  chartData.datasets = datasets;
+
+  chartData.labels = [];
+  datasets.forEach((dataset) => {
+    dataset.data = [];
+  });
+
+  rawData.value.forEach((p) => {
+    chartData.labels.push(toDisplayTimestamp(p.t, timezone.value));
+    if (isDetail) {
+      const cfg = STATUS_DETAIL[view as DetailView];
+      let sumExplicit = 0;
+      cfg.series.forEach((s, idx) => {
+        const v = p.statuses[s.code] || 0;
+        datasets[idx].data.push(v);
+        sumExplicit += v;
+      });
+      // "Other Nxx" = class total minus the explicit codes (never negative).
+      datasets[cfg.series.length].data.push(Math.max(0, (p.statuses[cfg.total] || 0) - sumExplicit));
+    } else if (view === 'status') {
+      datasets[0].data.push(p.s1);
+      datasets[1].data.push(p.s2);
+      datasets[2].data.push(p.s3);
+      datasets[3].data.push(p.s4);
+      datasets[4].data.push(p.s5);
+    } else if (view === 'bandwidth') {
+      datasets[0].data.push(p.bwEdge);
+      datasets[1].data.push(p.bwOrigin);
+      datasets[2].data.push(p.originFetches);
+    } else {
+      datasets[0].data.push(p.requests);
+      datasets[1].data.push(p.hits);
+      datasets[2].data.push(p.pass);
+      datasets[3].data.push(p.miss);
+      datasets[4].data.push(p.errors);
+      datasets[5].data.push(p.origin_offload);
+      datasets[6].data.push(p.hit_ratio);
+      datasets[7].data.push(p.cache_coverage);
+    }
+  });
+
+  if (chart.update) {
+    chart.update();
+  }
+}
+
+// Loads historical data for the current resolution/range and renders it.
+const loadHistoricalData = async () => {
+  const [fromMs, toMs] = computeRange();
+  if (!(fromMs < toMs)) {
+    return; // Invalid range
   }
 
   isLoading.value = true;
@@ -196,101 +472,78 @@ const loadHistoricalData = async (forceDates?: [Date, Date]) => {
   try {
     const projectService = new ProjectAPIService(credentialsStore.getServiceId(), credentialsStore.getServiceToken());
 
-    // Convert selected dates to timestamps (in seconds)
-    const fromTimestamp = Math.floor(activeDates[0].getTime() / 1000).toString();
+    const fromTimestamp = Math.floor(fromMs / 1000).toString();
+    const toTimestamp = Math.floor(toMs / 1000).toString();
+    const res = resolution.value;
 
-    // For the end date, we need to include the entire day, so we add 24 hours - 1 second
-    // This ensures that the API includes data for the last selected day
-    const endOfDay = new Date(activeDates[1]);
-    endOfDay.setHours(23, 59, 59, 999); // Set to end of the day
-    const toTimestamp = Math.floor(endOfDay.getTime() / 1000).toString();
+    // Match the x-axis to the current span and timezone before rendering.
+    updateAxis();
 
-    console.log('Loading historical data for dates:', {
-      from: activeDates[0].toISOString(),
-      to: activeDates[1].toISOString(),
-      toEndOfDay: endOfDay.toISOString(),
-      fromTimestamp,
-      toTimestamp,
-    });
+    const result = await projectService.getHistoricalData(fromTimestamp, toTimestamp, res);
 
-    const result = await projectService.getHistoricalData(fromTimestamp, toTimestamp, 'day');
+    const points: RawPoint[] = [];
+    const step = STEP_MS[res];
 
-    // Check if chart instance is still available (avoid error during logout)
-    if (!chartInstance.value || !chartInstance.value.chart) {
-      return;
-    }
-    const chart = chartInstance.value.chart;
-    // Force chart to resize to container
-    chart.resize();
-
-    // Clear existing data
-    chart.data.labels = [];
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    chart.data.datasets.forEach((dataset: any) => {
-      dataset.data = [];
-    });
-
-    if (result.data.length > 0) {
-      // La première valeur de l'array correspond au timestamp 'from' (en secondes)
-      // On convertit en millisecondes pour Chart.js
-      const fromTimestampMs = parseInt(fromTimestamp) * 1000;
-
+    if (result?.data?.length > 0) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       result.data.forEach((data: any, index: number) => {
-        // Extract raw metrics from API response
-        const cnt_request = data.requests || 0;
         const cnt_hit = data.hits || 0;
-        const cnt_error = data.errors || 0;
         const cnt_miss = data.miss || 0;
         const cnt_pass = data.pass || 0;
 
-        // Calculate origin offload percentage
-        let cnt_origin_offload = data.origin_offload * 100;
-        if (!cnt_origin_offload) {
-          cnt_origin_offload = 0;
-        }
+        // Origin offload comes back as a ratio (0..1) -> percentage.
+        const cnt_origin_offload = (data.origin_offload || 0) * 100;
 
-        // Calculate hit ratio percentage
-        let cnt_hit_ratio = 0;
-        if (cnt_hit + cnt_miss > 0) {
-          cnt_hit_ratio = (cnt_hit / (cnt_hit + cnt_miss)) * 100;
-        }
+        const cnt_hit_ratio = cnt_hit + cnt_miss > 0 ? (cnt_hit / (cnt_hit + cnt_miss)) * 100 : 0;
+        const cnt_cache_coverage =
+          cnt_hit + cnt_miss + cnt_pass > 0 ? ((cnt_hit + cnt_miss) / (cnt_hit + cnt_miss + cnt_pass)) * 100 : 0;
 
-        // Calculate cache coverage percentage
-        let cnt_cache_coverage = 0;
-        if (cnt_hit + cnt_miss + cnt_pass > 0) {
-          cnt_cache_coverage = ((cnt_hit + cnt_miss) / (cnt_hit + cnt_miss + cnt_pass)) * 100;
-        }
+        // Prefer the bucket start_time from the API; fall back to contiguous
+        // stepping from the 'from' timestamp (buckets are returned in order).
+        const t = typeof data.start_time === 'number' ? data.start_time * 1000 : fromMs + index * step;
 
-        // Calculate the timestamp for this data point
-        // Each index represents one day after the 'from' date
-        // Set timestamp to 00:00:00 of each day
-        const fromDate = new Date(fromTimestampMs);
-        const targetDate = new Date(fromDate);
-        targetDate.setDate(fromDate.getDate() + index);
-        targetDate.setHours(0, 0, 0, 0); // Set to 00:00:00.000
-        const dataTimestamp = targetDate.getTime();
-        chart.data.labels.push(dataTimestamp);
-        chart.data.datasets[0].data.push(cnt_request);
-        chart.data.datasets[1].data.push(cnt_hit);
-        chart.data.datasets[2].data.push(cnt_pass);
-        chart.data.datasets[3].data.push(cnt_miss);
-        chart.data.datasets[4].data.push(cnt_error);
-        chart.data.datasets[5].data.push(cnt_origin_offload);
-        chart.data.datasets[6].data.push(cnt_hit_ratio);
-        chart.data.datasets[7].data.push(cnt_cache_coverage);
+        // Drill-down views use the `status_Nxx` family (self-consistent with the
+        // individual `status_NNN` codes, so the stacked bars sum to the class
+        // total). The aggregate "HTTP Status" view uses the broader
+        // `all_status_Nxx` family, so the two views' class totals can differ.
+        const statuses: Record<string, number> = {};
+        INDIVIDUAL_STATUS_CODES.forEach((c) => (statuses[c] = data['status_' + c] || 0));
+        statuses['3xx'] = data.status_3xx || 0;
+        statuses['4xx'] = data.status_4xx || 0;
+        statuses['5xx'] = data.status_5xx || 0;
+
+        points.push({
+          t,
+          requests: data.requests || 0,
+          hits: cnt_hit,
+          pass: cnt_pass,
+          miss: cnt_miss,
+          errors: data.errors || 0,
+          origin_offload: cnt_origin_offload,
+          hit_ratio: cnt_hit_ratio,
+          cache_coverage: cnt_cache_coverage,
+          s1: data.all_status_1xx || 0,
+          s2: data.all_status_2xx || 0,
+          s3: data.all_status_3xx || 0,
+          s4: data.all_status_4xx || 0,
+          s5: data.all_status_5xx || 0,
+          bwEdge: data.bandwidth || 0,
+          bwOrigin: (data.origin_fetch_resp_body_bytes || 0) + (data.origin_fetch_resp_header_bytes || 0),
+          originFetches: data.origin_fetches || 0,
+          statuses,
+        });
       });
     }
 
-    computeCumulatedStat(result);
+    rawData.value = points;
+    // Chart may still be mounting on the very first load.
+    await nextTick();
+    renderChart();
 
-    // Update chart with new data (check if chart still exists)
-    // This will display an empty chart if no data is available
-    if (chart && chart.update) {
-      chart.update();
-    }
+    computeCumulatedStat(result);
   } catch (error) {
     console.error('Error loading historical data:', error);
+    toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to load historical data.', life: 5000 });
   } finally {
     isLoading.value = false;
   }
@@ -301,20 +554,21 @@ function computeCumulatedStat(result: { data: Array<Record<string, number>> }) {
   cumulatedStat.value = [];
 
   const metricsArr: Record<MetricKey, number[]> = {} as Record<MetricKey, number[]>;
+  const data = result?.data ?? [];
 
   // Normalize data into arrays for each metric
   metricsList.forEach((metricSpec: MetricSpec, metricKey: MetricKey) => {
     metricsArr[metricKey] = []; // Initialize array
     switch (metricKey) {
       case MetricKey.HIT_RATIO:
-        metricsArr[metricKey] = result.data.map((d) => {
+        metricsArr[metricKey] = data.map((d) => {
           const hits = d.hits ?? 0;
           const miss = d.miss ?? 0;
           return hits + miss > 0 ? (hits / (hits + miss)) * 100 : 0;
         });
         break;
       case MetricKey.CACHE_COVERAGE:
-        metricsArr[metricKey] = result.data.map((d) => {
+        metricsArr[metricKey] = data.map((d) => {
           const hits = d.hits ?? 0;
           const miss = d.miss ?? 0;
           const pass = d.pass ?? 0;
@@ -324,7 +578,7 @@ function computeCumulatedStat(result: { data: Array<Record<string, number>> }) {
 
       // All other metrics are direct mappings
       default:
-        metricsArr[metricKey] = result.data.map((d) => d[metricSpec.id] ?? 0);
+        metricsArr[metricKey] = data.map((d) => d[metricSpec.id] ?? 0);
         break;
     }
   });
@@ -347,233 +601,327 @@ function computeCumulatedStat(result: { data: Array<Record<string, number>> }) {
   });
 }
 
-// Navigation functions for date range
-const navigatePrevious = () => {
-  if (!dates.value || dates.value.length !== 2 || !dates.value[0] || !dates.value[1]) {
+//// Custom range actions ////
+
+// Seeds the custom pickers from the current effective range.
+function seedCustomPickers() {
+  const [from, to] = appliedCustom.value ?? computeRange();
+  customFrom.value = toWallClockDate(from, timezone.value);
+  customTo.value = toWallClockDate(to, timezone.value);
+}
+
+function setNow() {
+  customTo.value = toWallClockDate(Date.now(), timezone.value);
+}
+
+function applyCustom() {
+  const fromMs = fromWallClock(customFrom.value, timezone.value);
+  const toMs = fromWallClock(customTo.value, timezone.value);
+
+  if (!validateDateRange(new Date(fromMs), new Date(toMs))) {
+    toast.add({
+      severity: 'warn',
+      summary: 'Invalid range',
+      detail: 'From must be before To, within 2 years, and not in the future.',
+      life: 4000,
+    });
     return;
   }
 
-  const currentFrom = new Date(dates.value[0]);
-  const currentTo = new Date(dates.value[1]);
-  let newFrom: Date;
-  let newTo: Date;
-
-  switch (selected.value || DATE_PERIODS.MONTH) {
-    case DATE_PERIODS.WEEK:
-      // Move back 1 week
-      newFrom = new Date(currentFrom);
-      newFrom.setDate(currentFrom.getDate() - 7);
-      newTo = new Date(currentTo);
-      newTo.setDate(currentTo.getDate() - 7);
-      break;
-    case DATE_PERIODS.MONTH:
-      // Move back 1 month
-      newFrom = new Date(currentFrom);
-      newFrom.setMonth(currentFrom.getMonth() - 1);
-      newTo = new Date(currentTo);
-      newTo.setMonth(currentTo.getMonth() - 1);
-      break;
-    case DATE_PERIODS.YEAR:
-      // Move back 1 year
-      newFrom = new Date(currentFrom);
-      newFrom.setFullYear(currentFrom.getFullYear() - 1);
-      newTo = new Date(currentTo);
-      newTo.setFullYear(currentTo.getFullYear() - 1);
-      break;
-    default:
-      return;
+  setAppliedCustom(fromMs, toMs);
+  syncUrl();
+  // If the resolution is no longer valid for this range, the resolution watcher
+  // will trigger the reload once it corrects itself.
+  if (!ensureValidResolution()) {
+    loadHistoricalData();
   }
+}
 
-  dates.value = [newFrom, newTo];
-};
+//// Drag-to-zoom ////
 
-const navigateNext = () => {
-  if (!dates.value || dates.value.length !== 2 || !dates.value[0] || !dates.value[1]) {
-    return;
-  }
+// Applies a new [from, to] window in one shot (custom range + finest valid
+// resolution) with a single reload, watchers suppressed to avoid a storm.
+async function applyWindow(fromMs: number, toMs: number) {
+  suppressWatchers.value = true;
+  setAppliedCustom(fromMs, toMs);
+  timeRange.value = 'custom';
+  ensureValidResolution();
+  await nextTick();
+  suppressWatchers.value = false;
 
-  const currentFrom = new Date(dates.value[0]);
-  const currentTo = new Date(dates.value[1]);
-  let newFrom: Date;
-  let newTo: Date;
+  seedCustomPickers();
+  syncUrl();
+  await loadHistoricalData();
+}
 
-  switch (selected.value || DATE_PERIODS.MONTH) {
-    case DATE_PERIODS.WEEK:
-      // Move forward 1 week
-      newFrom = new Date(currentFrom);
-      newFrom.setDate(currentFrom.getDate() + 7);
-      newTo = new Date(currentTo);
-      newTo.setDate(currentTo.getDate() + 7);
-      break;
-    case DATE_PERIODS.MONTH:
-      // Move forward 1 month
-      newFrom = new Date(currentFrom);
-      newFrom.setMonth(currentFrom.getMonth() + 1);
-      newTo = new Date(currentTo);
-      newTo.setMonth(currentTo.getMonth() + 1);
-      break;
-    case DATE_PERIODS.YEAR:
-      // Move forward 1 year
-      newFrom = new Date(currentFrom);
-      newFrom.setFullYear(currentFrom.getFullYear() + 1);
-      newTo = new Date(currentTo);
-      newTo.setFullYear(currentTo.getFullYear() + 1);
-      break;
-    default:
-      return;
-  }
+// Called when the user finishes a horizontal drag on the chart. v1/v2 are
+// x-axis values (display space, tz-shifted); convert back to real epochs.
+function onDragSelect(v1: number, v2: number) {
+  const fromMs = fromWallClock(new Date(Math.min(v1, v2)), timezone.value);
+  const toMs = fromWallClock(new Date(Math.max(v1, v2)), timezone.value);
 
-  dates.value = [newFrom, newTo];
-};
+  if (!(fromMs < toMs) || toMs - fromMs < MIN_ZOOM_SPAN_MS) return;
 
-// Function to go back to current period based on selected mode
-const goToToday = () => {
-  const today = new Date();
-  let newDates: [Date, Date];
+  // Remember the current selection so "Reset zoom" can step back out.
+  zoomStack.value.push({
+    timeRange: timeRange.value,
+    appliedCustom: appliedCustom.value ? [...appliedCustom.value] : null,
+    resolution: resolution.value,
+  });
 
-  switch (selected.value || DATE_PERIODS.MONTH) {
-    case DATE_PERIODS.WEEK:
-      // Get current week (Monday to Sunday)
-      const currentDay = today.getDay();
-      const mondayOffset = currentDay === 0 ? -6 : 1 - currentDay; // Handle Sunday (0) case
+  applyWindow(fromMs, toMs);
+}
 
-      const weekStart = new Date(today);
-      weekStart.setDate(today.getDate() + mondayOffset);
+// Custom drag-to-zoom plugin (avoids chartjs-plugin-zoom, which recurses over
+// Vue's reactive proxies). Draws a selection band while dragging and reloads
+// the selected window on release. Same pattern as verticalLinePlugin.
+const dragZoomPlugin = {
+  id: 'dragZoom',
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  afterEvent(chart: any, args: any) {
+    const area = chart.chartArea;
+    if (!area) return;
+    const e = args.event;
+    const state = chart._dragZoom || (chart._dragZoom = { dragging: false, startX: 0, currentX: 0 });
+    const x = e.x;
 
-      const weekEnd = new Date(weekStart);
-      weekEnd.setDate(weekStart.getDate() + 6);
-
-      newDates = [weekStart, weekEnd];
-      break;
-    case DATE_PERIODS.MONTH:
-      // Get current month
-      newDates = [
-        new Date(today.getFullYear(), today.getMonth(), 1),
-        new Date(today.getFullYear(), today.getMonth() + 1, 0),
-      ];
-      break;
-    case DATE_PERIODS.YEAR:
-      // Get current year
-      newDates = [new Date(today.getFullYear(), 0, 1), new Date(today.getFullYear(), 11, 31)];
-      break;
-    default:
-      return;
-  }
-
-  dates.value = newDates;
-};
-
-// Function to get the first week of a given month
-const getFirstWeekOfMonth = (referenceDate: Date): [Date, Date] => {
-  const year = referenceDate.getFullYear();
-  const month = referenceDate.getMonth();
-
-  // Get first day of the month
-  const firstDay = new Date(year, month, 1);
-
-  // Find the Monday of the week containing the first day
-  const dayOfWeek = firstDay.getDay();
-  const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek; // Handle Sunday (0) case
-
-  const weekStart = new Date(firstDay);
-  weekStart.setDate(firstDay.getDate() + mondayOffset);
-
-  const weekEnd = new Date(weekStart);
-  weekEnd.setDate(weekStart.getDate() + 6);
-
-  return [weekStart, weekEnd];
-};
-
-onMounted(async () => {
-  // Check if we need to load dates from external component first
-  const currentTab = Array.isArray(route.query.tab) ? route.query.tab[0] : route.query.tab;
-  const fromParam = Array.isArray(route.query.from) ? route.query.from[0] : route.query.from;
-  const toParam = Array.isArray(route.query.to) ? route.query.to[0] : route.query.to;
-
-  // Only load immediately if we're on History tab AND we have dates in URL OR we're not on History tab
-  if (currentTab === TAB_VALUES.HISTORY) {
-    if (fromParam && toParam) {
-      // We have URL dates, load immediately
-      await loadHistoricalData();
-    } else {
-      // We don't have URL dates, check external component first
-      try {
-        const urlProps = await sdk.getUrlParams<UrlProps>();
-        if (urlProps && urlProps.from && urlProps.to) {
-          // External component has dates, they will be handled by the URL watcher
-          console.log('Dates will be loaded from external component');
-          return;
-        } else {
-          // No external dates, load with current dates
-          await loadHistoricalData();
+    switch (e.type) {
+      case 'mousedown':
+        if (x >= area.left && x <= area.right && e.y >= area.top && e.y <= area.bottom) {
+          state.dragging = true;
+          state.startX = x;
+          state.currentX = x;
         }
-      } catch (error) {
-        // Error getting external dates, load with current dates
-        console.log('Error getting external dates, loading with current dates');
-        await loadHistoricalData();
-      }
+        break;
+      case 'mousemove':
+        if (state.dragging) {
+          state.currentX = Math.max(area.left, Math.min(area.right, x));
+          args.changed = true; // request a redraw to update the band
+        }
+        break;
+      case 'mouseup':
+        if (state.dragging) {
+          state.dragging = false;
+          const { startX, currentX } = state;
+          chart.draw(); // clear the band
+          if (Math.abs(currentX - startX) > 3) {
+            const v1 = chart.scales.x.getValueForPixel(startX);
+            const v2 = chart.scales.x.getValueForPixel(currentX);
+            onDragSelect(v1, v2);
+          }
+        }
+        break;
+      case 'mouseout':
+        if (state.dragging) {
+          state.dragging = false;
+          chart.draw();
+        }
+        break;
     }
-  } else {
-    // Not on History tab, load immediately
-    await loadHistoricalData();
-  }
-});
+  },
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  afterDraw(chart: any) {
+    const state = chart._dragZoom;
+    if (!state || !state.dragging) return;
+    const area = chart.chartArea;
+    const ctx = chart.ctx;
+    const left = Math.min(state.startX, state.currentX);
+    const width = Math.abs(state.currentX - state.startX);
+    ctx.save();
+    ctx.fillStyle = 'rgba(59, 130, 246, 0.2)';
+    ctx.fillRect(left, area.top, width, area.bottom - area.top);
+    ctx.restore();
+  },
+};
 
-// Flag to prevent infinite loops during initialization
-const isInitializing = ref(true);
+// Steps back to the selection prior to the last drag-zoom.
+async function resetZoom() {
+  const prev = zoomStack.value.pop();
+  if (!prev) return;
 
-// Set flag after component is mounted
-onMounted(() => {
-  // Allow URL updates after initial setup - longer delay to avoid conflicts
-  setTimeout(() => {
-    isInitializing.value = false;
-  }, 200);
-});
+  suppressWatchers.value = true;
+  resolution.value = prev.resolution;
+  appliedCustom.value = prev.appliedCustom;
+  timeRange.value = prev.timeRange;
+  await nextTick();
+  suppressWatchers.value = false;
 
-// Watch for changes in selected period and update dates accordingly
-watch(selected, (newPeriod, oldPeriod) => {
-  // Skip if the period hasn't actually changed (prevent unnecessary updates when clicking the same option)
-  if (newPeriod === oldPeriod) {
-    return;
-  }
+  if (timeRange.value === 'custom') seedCustomPickers();
+  syncUrl();
+  await loadHistoricalData();
+}
 
-  if (!dates.value || dates.value.length !== 2 || !dates.value[0] || !dates.value[1]) {
-    return;
-  }
-
-  // Get reference date from current selection (use start date as reference)
-  const referenceDate = dates.value[0];
-
-  let newDates: [Date, Date];
-
-  switch (newPeriod) {
-    case DATE_PERIODS.WEEK:
-      // If switching to weekly, get the first week of the month containing the reference date
-      newDates = getFirstWeekOfMonth(referenceDate);
-      break;
-    case DATE_PERIODS.MONTH:
-      // If switching to monthly, get the month containing the reference date
-      newDates = [
-        new Date(referenceDate.getFullYear(), referenceDate.getMonth(), 1),
-        new Date(referenceDate.getFullYear(), referenceDate.getMonth() + 1, 0),
-      ];
-      break;
-    case DATE_PERIODS.YEAR:
-      // If switching to yearly, get the year containing the reference date
-      newDates = [new Date(referenceDate.getFullYear(), 0, 1), new Date(referenceDate.getFullYear(), 11, 31)];
-      break;
-    default:
-      return;
-  }
-
-  dates.value = newDates;
-});
+//// URL synchronisation ////
 
 interface UrlProps {
   from?: string;
   to?: string;
   tab?: TabValue;
 }
+
+function single(value: unknown): string | undefined {
+  const v = Array.isArray(value) ? value[0] : value;
+  return typeof v === 'string' ? v : undefined;
+}
+
+// Persists the current selection to the URL (both standalone and console modes).
+function syncUrl() {
+  const currentTab = single(route.query.tab);
+  if (currentTab !== TAB_VALUES.HISTORY) return;
+
+  const query: Record<string, string> = {
+    ...(route.query as Record<string, string>),
+    tab: TAB_VALUES.HISTORY,
+    res: resolution.value,
+    range: timeRange.value,
+    tz: timezone.value,
+    view: viewMode.value,
+  };
+
+  if (timeRange.value === 'custom') {
+    const [from, to] = computeRange();
+    query.from = formatDateForUrl(new Date(from));
+    query.to = formatDateForUrl(new Date(to));
+  } else {
+    delete query.from;
+    delete query.to;
+  }
+
+  // Console mode.
+  sdk.setUrlParams(query);
+  // Standalone mode.
+  router.replace({ query });
+}
+
+// Reads control state from the current URL query.
+function hydrateFromUrl() {
+  const tz = single(route.query.tz);
+  if (tz === TIME_ZONES.UTC || tz === TIME_ZONES.LOCAL) timezone.value = tz;
+
+  const res = single(route.query.res);
+  if (res === 'minute' || res === 'hour' || res === 'day') resolution.value = res;
+
+  const view = single(route.query.view);
+  if (view && VIEW_OPTIONS.some((o) => o.value === view)) viewMode.value = view as ViewMode;
+
+  const from = single(route.query.from);
+  const to = single(route.query.to);
+  if (from && to) {
+    const fromDate = parseDateFromUrl(from);
+    const toDate = parseDateFromUrl(to);
+    if (fromDate && toDate && validateDateRange(fromDate, toDate)) {
+      timeRange.value = 'custom';
+      setAppliedCustom(fromDate.getTime(), toDate.getTime());
+      return;
+    }
+  }
+
+  const range = single(route.query.range);
+  if (range && TIME_RANGES.some((r) => r.value === range)) {
+    timeRange.value = range;
+  }
+}
+
+onMounted(async () => {
+  hydrateFromUrl();
+
+  // Console mode: dates may arrive from the host component instead of the URL.
+  if (!route.query.from && !route.query.to) {
+    try {
+      const urlProps = await sdk.getUrlParams<UrlProps>();
+      if (urlProps?.from && urlProps?.to) {
+        const fromDate = parseDateFromUrl(String(urlProps.from));
+        const toDate = parseDateFromUrl(String(urlProps.to));
+        if (fromDate && toDate && validateDateRange(fromDate, toDate)) {
+          timeRange.value = 'custom';
+          setAppliedCustom(fromDate.getTime(), toDate.getTime());
+        }
+      }
+    } catch {
+      // No external dates available.
+    }
+  }
+
+  if (timeRange.value === 'custom') seedCustomPickers();
+  ensureValidResolution();
+  await loadHistoricalData();
+
+  // Allow watchers to react to user changes after initial setup.
+  await nextTick();
+  initializing.value = false;
+});
+
+//// Watchers ////
+
+watch(resolution, () => {
+  if (initializing.value || suppressWatchers.value) return;
+  zoomStack.value = []; // an explicit resolution change supersedes the zoom history
+  syncUrl();
+  loadHistoricalData();
+});
+
+watch(timeRange, (value) => {
+  if (initializing.value || suppressWatchers.value) return;
+  zoomStack.value = []; // an explicit range change supersedes the zoom history
+  if (value === 'custom') {
+    seedCustomPickers();
+    return; // Wait for the user to Apply.
+  }
+  syncUrl();
+  if (!ensureValidResolution()) {
+    loadHistoricalData();
+  }
+});
+
+watch(timezone, () => {
+  if (initializing.value || suppressWatchers.value) return;
+  // Timezone only affects display: re-render the chart and reformat pickers.
+  updateAxis();
+  renderChart();
+  if (timeRange.value === 'custom') seedCustomPickers();
+  syncUrl();
+});
+
+watch(viewMode, () => {
+  if (initializing.value || suppressWatchers.value) return;
+  // Same data, different series/chart type: no refetch needed.
+  updateAxis();
+  renderChart();
+  syncUrl();
+});
+
+// React to external date changes (e.g. the Upsun console) on the History tab.
+watch(
+  () => [route.query.tab, route.query.from, route.query.to],
+  async () => {
+    if (initializing.value || suppressWatchers.value) return;
+    const currentTab = single(route.query.tab);
+    if (currentTab !== TAB_VALUES.HISTORY) return;
+
+    const from = single(route.query.from);
+    const to = single(route.query.to);
+    if (!from || !to) return;
+
+    const fromDate = parseDateFromUrl(from);
+    const toDate = parseDateFromUrl(to);
+    if (!fromDate || !toDate || !validateDateRange(fromDate, toDate)) return;
+
+    // Compare against the rounded (second-aligned) applied range so a URL update
+    // we just wrote via syncUrl() doesn't re-trigger a load here.
+    const next: [number, number] = [Math.floor(fromDate.getTime() / 1000) * 1000, Math.floor(toDate.getTime() / 1000) * 1000];
+    const current = appliedCustom.value;
+    if (current && current[0] === next[0] && current[1] === next[1]) return;
+
+    timeRange.value = 'custom';
+    setAppliedCustom(next[0], next[1]);
+    seedCustomPickers();
+    // If the resolution needs correcting, the resolution watcher reloads;
+    // otherwise load here (avoids a double fetch), matching the other paths.
+    if (!ensureValidResolution()) {
+      await loadHistoricalData();
+    }
+  },
+);
 
 /**
  * Formats a numeric value without decimals and with thousands separator
@@ -614,160 +962,79 @@ function format_int(value: number | string, spec: MetricSpec): string {
 
   return num.toLocaleString('fr-FR', { maximumFractionDigits: decimal }) + ' ' + scale + unit;
 }
-
-// Watch URL changes to update dates and mode
-watch(
-  () => [route.query.from, route.query.to, route.query.tab],
-  async ([newFrom, newTo, newTab]) => {
-    // Only process date changes if we're on the History tab
-    const currentTab = Array.isArray(newTab) ? newTab[0] : newTab;
-    if (currentTab !== TAB_VALUES.HISTORY) return;
-
-    let fromParam = newFrom;
-    let toParam = newTo;
-
-    if (!newFrom && !newTo) {
-      const urlProps = await sdk.getUrlParams<UrlProps>();
-      if (urlProps) {
-        fromParam = urlProps.from;
-        toParam = urlProps.to;
-      }
-    }
-
-    // Handle case where query params can be arrays
-    fromParam = Array.isArray(fromParam) ? fromParam[0] : fromParam;
-    toParam = Array.isArray(toParam) ? toParam[0] : toParam;
-
-    if (fromParam && toParam) {
-      const fromDate = parseDateFromUrl(fromParam as string);
-      const toDate = parseDateFromUrl(toParam as string);
-
-      if (fromDate && toDate && fromDate <= toDate) {
-        // Only update if the dates are actually different
-        const currentDates = dates.value;
-        const datesAreDifferent =
-          !currentDates ||
-          currentDates.length !== 2 ||
-          !currentDates[0] ||
-          !currentDates[1] ||
-          currentDates[0].getTime() !== fromDate.getTime() ||
-          currentDates[1].getTime() !== toDate.getTime();
-
-        if (datesAreDifferent) {
-          // Update mode based on the date range first
-          selected.value = initializeModeFromDates([fromDate, toDate]) || DATE_PERIODS.MONTH;
-
-          // Force reload of historical data when dates come from external component
-          if (!newFrom && !newTo) {
-            isLoadingFromExternal.value = true;
-            // Load data with the new dates directly, before updating dates.value
-            await loadHistoricalData([fromDate, toDate]);
-            isLoadingFromExternal.value = false;
-          }
-
-          // Update dates.value after loading data
-          dates.value = [fromDate, toDate];
-        }
-      }
-    }
-  },
-  { immediate: true },
-);
-
-// Watch dates changes to update URL and reload data
-watch(
-  dates,
-  async (newDates, oldDates) => {
-    // Skip URL updates during initialization to avoid conflicts with tab handling
-    if (isInitializing.value) return;
-
-    // Only update URL if we're on the History tab
-    const currentTab = Array.isArray(route.query.tab) ? route.query.tab[0] : route.query.tab;
-    if (currentTab !== TAB_VALUES.HISTORY) return;
-
-    if (newDates && newDates.length === 2 && newDates[0] && newDates[1]) {
-      const fromStr = formatDateForUrl(newDates[0]);
-      const toStr = formatDateForUrl(newDates[1]);
-
-      // Convert query params to string for comparison (they can be arrays)
-      const currentFrom = Array.isArray(route.query.from) ? route.query.from[0] : route.query.from;
-      const currentTo = Array.isArray(route.query.to) ? route.query.to[0] : route.query.to;
-
-      // Only update URL if dates actually changed and are different from current URL
-      const datesChanged =
-        !oldDates ||
-        !oldDates[0] ||
-        !oldDates[1] ||
-        newDates[0].getTime() !== oldDates[0].getTime() ||
-        newDates[1].getTime() !== oldDates[1].getTime();
-
-      if (datesChanged && (currentFrom !== fromStr || currentTo !== toStr)) {
-        const query = {
-          ...route.query,
-          from: fromStr,
-          to: toStr,
-        };
-
-        // Console mode.
-        await sdk.setUrlParams(query);
-
-        // Standalone mode.
-        router.replace({ query });
-
-        // Reload historical data when dates change (but not if already loading from external)
-        if (!isLoadingFromExternal.value) {
-          await loadHistoricalData();
-        }
-      }
-    }
-  },
-  { flush: 'post' },
-);
 </script>
 
 <template>
   <Card>
     <template #title>Historical statistics</template>
     <template #content>
-      <div class="flex">
-        <div class="flex align-items-center">
-          <SelectButton v-model="selected" :options="options" optionLabel="label" optionValue="value" />
-          <!-- <div v-if="isLoading" class="loading-spinner ml-3">
-            <i class="pi pi-spin pi-spinner" style="font-size: 1.2rem; color: var(--p-primary-color)"></i>
-          </div> -->
+      <div class="history-controls">
+        <div class="control">
+          <label class="control-label">Metric</label>
+          <Select v-model="viewMode" :options="VIEW_OPTIONS" optionLabel="label" optionValue="value" />
         </div>
-        <div class="navigation-container push-right">
-          <Button
-            icon="pi pi-chevron-left"
-            @click="navigatePrevious"
-            size="small"
-            outlined
-            :title="`Previous ${selected.toLowerCase()}`"
+        <div class="control">
+          <label class="control-label">Data Resolution</label>
+          <Select
+            v-model="resolution"
+            :options="resolutionOptions"
+            optionLabel="label"
+            optionValue="value"
+            optionDisabled="disabled"
           />
-          <Button
-            label="Today"
-            @click="goToToday"
-            size="small"
-            outlined
-            :title="`Go to current ${selected.toLowerCase()}`"
+        </div>
+        <div class="control">
+          <label class="control-label">Time Range</label>
+          <Select v-model="timeRange" :options="TIME_RANGES" optionLabel="label" optionValue="value" />
+        </div>
+        <div class="control">
+          <label class="control-label">Time zone</label>
+          <SelectButton
+            v-model="timezone"
+            :options="TIMEZONE_OPTIONS"
+            optionLabel="label"
+            optionValue="value"
+            :allowEmpty="false"
           />
-          <DatePicker v-model="dates" selectionMode="range" :manualInput="false" showIcon />
-          <Button
-            icon="pi pi-chevron-right"
-            @click="navigateNext"
-            size="small"
-            outlined
-            :title="`Next ${selected.toLowerCase()}`"
-          />
+        </div>
+        <div v-if="isLoading" class="control loading-inline">
+          <i class="pi pi-spin pi-spinner" style="font-size: 1.2rem; color: var(--p-primary-color)"></i>
         </div>
       </div>
+
+      <div v-if="timeRange === 'custom'" class="custom-range">
+        <div class="cr-field">
+          <label class="control-label">From</label>
+          <DatePicker v-model="customFrom" showTime hourFormat="24" :manualInput="true" showIcon />
+        </div>
+        <div class="cr-field">
+          <label class="control-label">To</label>
+          <div class="cr-to">
+            <DatePicker v-model="customTo" showTime hourFormat="24" :manualInput="true" showIcon />
+            <Button label="Now" text size="small" @click="setNow" />
+          </div>
+        </div>
+        <Button label="Apply" size="small" @click="applyCustom" />
+      </div>
+
       <div class="chart-spacer"></div>
+      <div class="chart-toolbar">
+        <span class="chart-hint"><i class="pi pi-search-plus"></i> Drag across the chart to zoom into a time window</span>
+        <Button
+          v-if="zoomStack.length > 0"
+          label="Reset zoom"
+          icon="pi pi-refresh"
+          size="small"
+          text
+          @click="resetZoom"
+        />
+      </div>
       <Chart
-        type="line"
+        :type="chartType"
         ref="chartInstance"
         :data="chartData"
         :options="chartOptions"
-        :plugins="[verticalLinePlugin]"
+        :plugins="[verticalLinePlugin, dragZoomPlugin]"
         class="w-full h-[25rem] chart-container"
       />
       <div class="mt-5">
@@ -827,3 +1094,70 @@ watch(
     </template>
   </Card>
 </template>
+
+<style scoped>
+.history-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 1rem;
+}
+
+.control {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.control-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--p-text-muted-color, #6b7280);
+}
+
+.loading-inline {
+  justify-content: flex-end;
+  padding-bottom: 0.4rem;
+}
+
+.custom-range {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 1rem;
+  margin-top: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--p-content-border-color, #e5e7eb);
+  border-radius: 8px;
+}
+
+.cr-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.cr-to {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.chart-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+  min-height: 2rem;
+}
+
+.chart-hint {
+  font-size: 0.8rem;
+  color: var(--p-text-muted-color, #6b7280);
+}
+
+.chart-hint i {
+  margin-right: 0.3rem;
+}
+</style>
