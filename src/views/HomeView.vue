@@ -238,7 +238,7 @@ const vclVersionIsDefined = computed(() => credentialsStore.vclVersionIsDefined.
 
     <!-- Main application if credentials are valid -->
     <div v-else-if="vclVersionIsDefined">
-      <Tabs :value="activeTab" @update:value="handleTabChange">
+      <Tabs :value="activeTab" @update:value="handleTabChange" lazy>
         <TabList>
           <Tab :value="TAB_VALUES.REALTIME">Real-time</Tab>
           <Tab :value="TAB_VALUES.HISTORY">History</Tab>
