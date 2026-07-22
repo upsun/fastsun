@@ -172,13 +172,49 @@ export const createRealtimeChartOptions = () => ({
 /**
  * Chart configuration options for historical charts (days/months/years resolution)
  * Defines scales, tooltips, legends, and other chart behaviors for historical data
- * @param {string} timeUnit - The time unit for the x-axis ('day', 'month', 'year')
+ * @param {string} timeUnit - The time unit for the x-axis ('minute', 'hour', 'day', 'month', 'year')
  * @param {number} stepSize - The step size for the time axis
+/**
+ * Legend click handler that isolates ("solos") the clicked series so only it
+ * is shown and the axis rescales to it. Clicking the already-soloed series
+ * restores every dataset to its default visibility.
  */
-export const createHistoricalChartOptions = (timeUnit: string = 'day', stepSize: number = 1) => ({
+/* eslint-disable @typescript-eslint/no-explicit-any */
+function soloLegendClick(e: any, legendItem: any, legend: any) {
+  // The chart's events include 'mouseup' (for drag-to-zoom), and Chart.js fires
+  // the legend onClick on BOTH 'mouseup' and 'click'. Act only on the real
+  // click, otherwise the two fires cancel out this toggle.
+  if (e && e.type === 'mouseup') return;
+  const chart = legend.chart;
+  const index = legendItem.datasetIndex;
+  const datasets = chart.data.datasets as any[];
+  const visibleCount = datasets.reduce((n: number, _ds: any, i: number) => n + (chart.isDatasetVisible(i) ? 1 : 0), 0);
+  const isSoloed = visibleCount === 1 && chart.isDatasetVisible(index);
+  datasets.forEach((ds: any, i: number) => {
+    // Restore each dataset's default visibility when un-soloing, else show only the clicked one.
+    chart.setDatasetVisibility(i, isSoloed ? !ds.hidden : i === index);
+  });
+  chart.update();
+}
+/* eslint-enable @typescript-eslint/no-explicit-any */
+
+/**
+ * @param {string} axisTitle - The label for the x-axis (e.g. 'Time (UTC)')
+ * @param {boolean} stacked - Whether to stack the count axis / x categories (status-code view)
+ */
+export const createHistoricalChartOptions = (
+  timeUnit: string = 'day',
+  stepSize: number = 1,
+  axisTitle: string = 'Time',
+  stacked: boolean = false,
+  valueSuffix: string = '',
+  countAxisTitle: string = 'Count',
+) => ({
   responsive: true,
   maintainAspectRatio: false,
   animation: false,
+  // mousedown/mouseup are needed by the drag-to-zoom plugin (not in Chart.js defaults).
+  events: ['mousemove', 'mouseout', 'click', 'mousedown', 'mouseup', 'touchstart', 'touchmove', 'touchend'],
   interaction: {
     mode: 'nearest',
     intersect: true,
@@ -187,6 +223,8 @@ export const createHistoricalChartOptions = (timeUnit: string = 'day', stepSize:
     legend: {
       display: true,
       position: 'right',
+      // Click a series to show only it (axis rescales); click again to restore all.
+      onClick: soloLegendClick,
       labels: {
         boxWidth: 12,
         padding: 10,
@@ -225,7 +263,10 @@ export const createHistoricalChartOptions = (timeUnit: string = 'day', stepSize:
             } else {
               formattedValue = value.toLocaleString();
             }
-            return `${datasetLabel}: ${formattedValue}`;
+            // Only the primary count axis carries the value suffix (e.g. bytes);
+            // the secondary axis (y_cnt2) is a plain count (origin requests).
+            const suffix = context.dataset.yAxisID === 'y_cnt' ? valueSuffix : '';
+            return `${datasetLabel}: ${formattedValue}${suffix}`;
           }
         },
       },
@@ -239,6 +280,7 @@ export const createHistoricalChartOptions = (timeUnit: string = 'day', stepSize:
       display: true,
       position: 'left',
       min: 0,
+      stacked,
       ticks: {
         /**
          * Custom tick label formatter for count axis
@@ -247,25 +289,28 @@ export const createHistoricalChartOptions = (timeUnit: string = 'day', stepSize:
          */
         callback: function (value: number) {
           // Format with unit prefixes (k, M, G) and thousands separators
+          let formatted;
           if (value >= 1000000000) {
-            return (value / 1000000000).toFixed(1).replace(/\.0$/, '') + 'G';
+            formatted = (value / 1000000000).toFixed(1).replace(/\.0$/, '') + 'G';
           } else if (value >= 1000000) {
-            return (value / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
+            formatted = (value / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
           } else if (value >= 1000) {
-            return (value / 1000).toFixed(1).replace(/\.0$/, '') + 'k';
+            formatted = (value / 1000).toFixed(1).replace(/\.0$/, '') + 'k';
           } else {
-            return value.toLocaleString();
+            formatted = value.toLocaleString();
           }
+          return formatted + valueSuffix;
         },
       },
       title: {
         display: true,
-        text: 'Count',
+        text: countAxisTitle,
       },
     },
     y_per: {
       type: 'linear',
-      display: true,
+      // display 'auto' -> only shown when a dataset assigned to it is visible.
+      display: 'auto',
       position: 'right',
       min: 0,
       max: 100,
@@ -287,8 +332,31 @@ export const createHistoricalChartOptions = (timeUnit: string = 'day', stepSize:
         drawOnChartArea: false,
       },
     },
+    // Secondary right-hand count axis (e.g. origin request count on the bandwidth view).
+    y_cnt2: {
+      type: 'linear',
+      display: 'auto',
+      position: 'right',
+      min: 0,
+      ticks: {
+        callback: function (value: number) {
+          if (value >= 1000000000) return (value / 1000000000).toFixed(1).replace(/\.0$/, '') + 'G';
+          else if (value >= 1000000) return (value / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
+          else if (value >= 1000) return (value / 1000).toFixed(1).replace(/\.0$/, '') + 'k';
+          return value.toLocaleString();
+        },
+      },
+      title: {
+        display: true,
+        text: 'Requests',
+      },
+      grid: {
+        drawOnChartArea: false,
+      },
+    },
     x: {
       type: 'time',
+      stacked,
       time: {
         unit: timeUnit,
         unitStepSize: stepSize,
@@ -303,7 +371,7 @@ export const createHistoricalChartOptions = (timeUnit: string = 'day', stepSize:
       },
       title: {
         display: true,
-        text: 'Time',
+        text: axisTitle,
       },
     },
   },
@@ -322,9 +390,12 @@ const commonDatasetOptions = {
 /**
  * Creates chart datasets configuration for statistics visualization
  * @param {number} sampleCount - Number of data points to initialize with NaN values
+ * @param {object} datasetOverrides - Extra per-dataset options merged into every dataset
+ *   (e.g. { pointRadius: 0 } to hide always-on markers). Defaults to none.
  * @returns {Array} Array of dataset configurations for the chart
  */
-export const createChartDatasets = (sampleCount: number) => [
+export const createChartDatasets = (sampleCount: number, datasetOverrides: Record<string, unknown> = {}) => {
+  const datasets = [
   {
     label: 'Request',
     borderColor: '#2196F3',
@@ -392,14 +463,113 @@ export const createChartDatasets = (sampleCount: number) => [
     data: Array.from({ length: sampleCount }).fill(NaN),
     ...commonDatasetOptions,
   },
-];
+  ];
+
+  // Merge any caller-supplied overrides into every dataset.
+  return datasets.map((dataset) => ({ ...dataset, ...datasetOverrides }));
+};
+
+/**
+ * Creates datasets for the HTTP status-code view (1xx..5xx), styled for a
+ * stacked bar chart with Fastly-like colours.
+ * @param {number} sampleCount - Number of data points to initialize with NaN values
+ * @param {object} datasetOverrides - Extra per-dataset options merged into every dataset
+ * @returns {Array} Array of status-code dataset configurations
+ */
+export const createStatusDatasets = (sampleCount: number, datasetOverrides: Record<string, unknown> = {}) => {
+  const series = [
+    { label: 'Info (1xx)', color: '#3B82F6' },
+    { label: 'Success (2xx)', color: '#22C55E' },
+    { label: 'Redirect (3xx)', color: '#EC4899' },
+    { label: 'Client Error (4xx)', color: '#F59E0B' },
+    { label: 'Server Error (5xx)', color: '#06B6D4' },
+  ];
+
+  return series.map((s) => ({
+    label: s.label,
+    borderColor: s.color,
+    backgroundColor: s.color,
+    yAxisID: 'y_cnt',
+    data: Array.from({ length: sampleCount }).fill(NaN),
+    borderWidth: 0,
+    // Make adjacent bars touch, like the Fastly service-overview chart.
+    barPercentage: 1.0,
+    categoryPercentage: 1.0,
+    ...datasetOverrides,
+  }));
+};
+
+/**
+ * Creates stacked-bar datasets from an explicit list of {label, color} series
+ * (used by the per-class status drill-down views: 3xx / 4xx / 5xx details).
+ * @param {Array} series - Series descriptors ({ label, color })
+ * @param {number} sampleCount - Number of data points to initialize with NaN values
+ * @param {object} datasetOverrides - Extra per-dataset options merged into every dataset
+ * @returns {Array} Array of dataset configurations
+ */
+export const createStatusDetailDatasets = (
+  series: { label: string; color: string }[],
+  sampleCount: number,
+  datasetOverrides: Record<string, unknown> = {},
+) => {
+  return series.map((s) => ({
+    label: s.label,
+    borderColor: s.color,
+    backgroundColor: s.color,
+    yAxisID: 'y_cnt',
+    data: Array.from({ length: sampleCount }).fill(NaN),
+    borderWidth: 0,
+    barPercentage: 1.0,
+    categoryPercentage: 1.0,
+    ...datasetOverrides,
+  }));
+};
+
+/**
+ * Creates datasets for the bandwidth view: edge (bytes delivered to end users)
+ * and origin (bytes received from origin), rendered as line/area series.
+ * @param {number} sampleCount - Number of data points to initialize with NaN values
+ * @param {object} datasetOverrides - Extra per-dataset options merged into every dataset
+ * @returns {Array} Array of bandwidth dataset configurations
+ */
+export const createBandwidthDatasets = (sampleCount: number, datasetOverrides: Record<string, unknown> = {}) => {
+  const byteSeries = [
+    { label: 'Edge', color: '#2196F3' },
+    { label: 'Origin', color: '#FF7043' },
+  ].map((s) => ({
+    label: s.label,
+    borderColor: s.color,
+    backgroundColor: s.color + '20',
+    yAxisID: 'y_cnt',
+    data: Array.from({ length: sampleCount }).fill(NaN),
+    ...commonDatasetOptions,
+    ...datasetOverrides,
+  }));
+
+  // Origin request count on the secondary (right) count axis, drawn as a dashed line.
+  const originRequests = {
+    label: 'Origin requests',
+    borderColor: '#9C27B0',
+    backgroundColor: '#9C27B020',
+    yAxisID: 'y_cnt2',
+    data: Array.from({ length: sampleCount }).fill(NaN),
+    fill: false,
+    tension: 0.3,
+    borderWidth: 1,
+    borderDash: [5, 4],
+    ...datasetOverrides,
+  };
+
+  return [...byteSeries, originRequests];
+};
 
 /**
  * Creates complete chart data configuration with labels and datasets
  * @param {number} sampleCount - Number of data points to initialize
+ * @param {object} datasetOverrides - Extra per-dataset options (see createChartDatasets)
  * @returns {object} Complete chart data object with timestamps and datasets
  */
-export const createChartData = (sampleCount: number) => {
+export const createChartData = (sampleCount: number, datasetOverrides: Record<string, unknown> = {}) => {
   const now = Date.now(); // en millisecondes
   const timestamps: number[] = Array.from({ length: sampleCount }, (_, i) => {
     return now - (sampleCount - 1 - i) * 1000;
@@ -407,7 +577,7 @@ export const createChartData = (sampleCount: number) => {
 
   return {
     labels: timestamps,
-    datasets: createChartDatasets(sampleCount),
+    datasets: createChartDatasets(sampleCount, datasetOverrides),
   };
 };
 
