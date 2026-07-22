@@ -12,6 +12,7 @@ const KEY_FASTLY_TK = 'fastcdn-fastly-api-tk'; // Legacy key - kept for migratio
 const KEY_ADMIN_MODE = 'fastcdn-admin-mode';
 const KEY_RTAPI_ENABLE = 'fastcdn-rtapi-enable';
 const KEY_SCHEMA_VERSION = 'fastcdn-schema-version';
+const KEY_LOGOUT_REASON = 'fastcdn-logout-reason'; // sessionStorage — clears on tab close
 
 // Value of encrypt/Decrypt engine.
 const SECRET = import.meta.env.VITE_CRYPTO_SECRET_KEY;
@@ -199,6 +200,20 @@ export default class LocalStore {
     if (credentials) {
       this.setFastlyCredentials('default', 'default', credentials.fastlyId, fastly_token);
     }
+  }
+
+  // ---- Logout reason (sessionStorage — survives page reload, clears on tab close) ----
+
+  setLogoutReason(reason: string) {
+    sessionStorage.setItem(KEY_LOGOUT_REASON, reason);
+  }
+
+  getLogoutReason(): string {
+    return sessionStorage.getItem(KEY_LOGOUT_REASON) ?? '';
+  }
+
+  clearLogoutReason() {
+    sessionStorage.removeItem(KEY_LOGOUT_REASON);
   }
 
   resetFastly(projectId?: string, environmentId?: string) {

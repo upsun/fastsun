@@ -52,6 +52,14 @@ class SecureApiService {
     });
 
     if (!response.ok) {
+      if (response.status === 401) {
+        const credentialsStore = useCredentialsStore();
+        credentialsStore.setLogoutReason(
+          'Your Fastly token is no longer valid (401). It may have been rotated or revoked. Please update your credentials.',
+        );
+        credentialsStore.logout();
+        throw new Error('Authentication failed: your Fastly token is invalid or has been rotated. Please update your credentials.');
+      }
       throw new Error(`API request failed: ${response.status} ${response.statusText}`);
     }
 

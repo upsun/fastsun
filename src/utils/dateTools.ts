@@ -1,12 +1,3 @@
-// Date period constants
-export const DATE_PERIODS = {
-  WEEK: 'week',
-  MONTH: 'month',
-  YEAR: 'year',
-} as const;
-
-export type DatePeriod = (typeof DATE_PERIODS)[keyof typeof DATE_PERIODS];
-
 // Utility functions for timestamp formatting
 export const formatDateForUrl = (date: Date): string => {
   return Math.floor(date.getTime() / 1000).toString(); // Convert to timestamp in seconds
@@ -35,47 +26,62 @@ export const parseDateFromUrl = (timestampStr: string): Date | null => {
   return isNaN(date.getTime()) ? null : date;
 };
 
-// Get current week's start (Monday) and end (Sunday)
-export const getCurrentWeek = (): [Date, Date] => {
-  const now = new Date();
-  const dayOfWeek = now.getDay();
-  const diff = now.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1); // Adjust when day is Sunday
+// Timezone modes for the historical view
+export const TIME_ZONES = {
+  UTC: 'utc',
+  LOCAL: 'local',
+} as const;
 
-  const startOfWeek = new Date(now.setDate(diff));
-  const endOfWeek = new Date(startOfWeek);
-  endOfWeek.setDate(startOfWeek.getDate() + 6);
+export type TimeZoneMode = (typeof TIME_ZONES)[keyof typeof TIME_ZONES];
 
-  return [startOfWeek, endOfWeek];
-};
-
-// Get current month's start and end
-export const getCurrentMonth = (): [Date, Date] => {
-  const now = new Date();
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-  const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-
-  return [startOfMonth, endOfMonth];
-};
-
-// Get current year's start and end
-export const getCurrentYear = (): [Date, Date] => {
-  const now = new Date();
-  const startOfYear = new Date(now.getFullYear(), 0, 1);
-  const endOfYear = new Date(now.getFullYear(), 11, 31);
-
-  return [startOfYear, endOfYear];
-};
-
-// Get current period based on selected option
-export const getCurrentPeriod = (period: string): [Date, Date] => {
-  switch (period) {
-    case DATE_PERIODS.WEEK:
-      return getCurrentWeek();
-    case DATE_PERIODS.MONTH:
-      return getCurrentMonth();
-    case DATE_PERIODS.YEAR:
-      return getCurrentYear();
-    default:
-      return getCurrentMonth();
+/**
+ * Transforms a real epoch (ms) into a value that, when rendered by a
+ * local-timezone chart formatter, displays the desired wall-clock time.
+ * In 'local' mode the epoch is returned unchanged; in 'utc' mode it is
+ * shifted so the local formatter prints the UTC wall-clock instead.
+ * The offset is computed per-timestamp so DST transitions are handled.
+ *
+ * Caveat: toWallClockDate()/fromWallClock() derive the offset from slightly
+ * different instants, so the round-trip can drift by up to 1h for wall-clock
+ * times that land within a DST transition. This only affects the custom-range
+ * picker seed in UTC mode near a transition and is considered acceptable.
+ */
+export const toDisplayTimestamp = (epochMs: number, tz: TimeZoneMode): number => {
+  if (tz === TIME_ZONES.UTC) {
+    return epochMs + new Date(epochMs).getTimezoneOffset() * 60000;
   }
+  return epochMs;
+};
+
+/**
+ * Interprets the wall-clock fields of a Date (as produced by a date/time
+ * picker) in the selected timezone and returns the real epoch (ms).
+ * Inverse of toDisplayTimestamp.
+ */
+export const fromWallClock = (date: Date, tz: TimeZoneMode): number => {
+  if (tz === TIME_ZONES.UTC) {
+    return date.getTime() - date.getTimezoneOffset() * 60000;
+  }
+  return date.getTime();
+};
+
+/**
+ * Builds a Date whose local wall-clock fields equal the given epoch's
+ * wall-clock in the selected timezone (used to seed the custom pickers).
+ */
+export const toWallClockDate = (epochMs: number, tz: TimeZoneMode): Date => {
+  return new Date(toDisplayTimestamp(epochMs, tz));
+};
+
+/**
+ * Chooses a sensible x-axis tick unit from the total span of the range,
+ * independent of the data resolution (mirrors the Fastly chart behaviour).
+ */
+export const displayUnitForSpan = (spanMs: number): string => {
+  const HOUR = 3600000;
+  const DAY = 86400000;
+  if (spanMs <= 2 * HOUR) return 'minute';
+  if (spanMs <= 3 * DAY) return 'hour';
+  if (spanMs <= 60 * DAY) return 'day';
+  return 'month';
 };

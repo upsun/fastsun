@@ -3,9 +3,15 @@ import { ref } from 'vue';
 import Card from 'primevue/card';
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
+import Message from 'primevue/message';
 import ApiCache from '@/stores/localStorage';
 
 const apiStorage = new ApiCache();
+// Read directly from sessionStorage at setup time — synchronous, no timing issues.
+// sessionStorage is written by setLogoutReason() before logout() clears credentials,
+// so it is always available when this component mounts after a 401.
+const logoutReason = ref(apiStorage.getLogoutReason());
+console.log('FastSun > SetupCard mounted, logoutReason:', logoutReason.value);
 const props = defineProps({
   service_id: {
     type: String,
@@ -43,6 +49,8 @@ function saveId() {
   if (fastly_id.value && fastly_token.value) {
     console.log('FastSun > Set ID & Token for project:', props.project_id, 'environment:', props.environment_id);
     apiStorage.setFastlyCredentials(props.project_id, props.environment_id, fastly_id.value, fastly_token.value);
+    apiStorage.clearLogoutReason();
+    logoutReason.value = '';
 
     // Emit the saved credentials to parent component
     emit('credentials:saved', {
@@ -60,8 +68,13 @@ function saveId() {
   <Card>
     <template #title>Setup Fastly Credentials</template>
     <template #content>
+      <Message v-if="logoutReason" severity="warn" :closable="false" class="mb-4">
+        {{ logoutReason }}
+      </Message>
+
       <div class="setupcard-explanation text-sm text-gray-700">
-        Your Fastly credentials are stored securely within your browser and solely transmitted to https://fastsun.plugins.pltfrm.sh/ hosted on Upsun.<br />
+        Your Fastly credentials are stored securely within your browser and solely transmitted to
+        https://fastsun.plugins.pltfrm.sh/ hosted on Upsun.<br />
         This method enhances security by ensuring that your credentials are not shared with any third parties, thereby
         reducing the risk of unauthorized access.<br />
         Please note that if you access Upsun from a different browser or device, you will be required to re-enter your
