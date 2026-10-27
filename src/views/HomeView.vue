@@ -82,10 +82,18 @@ function refresh() {
 
       const is401 =
         error?.response?.status === 401 || error?.status === 401 || String(error?.message ?? '').includes('401');
+      const is404 = error?.response?.status === 404 || error?.status === 404;
 
       if (is401) {
         credentialsStore.setLogoutReason(
           'Your Fastly token is no longer valid (401). It may have been rotated or revoked. Please update your credentials.',
+        );
+        credentialsStore.logout();
+      } else if (is404) {
+        // Fastly returns a 404 "Record not found" (with a cryptic nil_class detail) when the
+        // token is valid but the Service ID doesn't exist or isn't visible to that token.
+        credentialsStore.setLogoutReason(
+          'Fastly service not found (404). The configured Service ID may be incorrect or no longer exists for this token. Please update your credentials.',
         );
         credentialsStore.logout();
       } else {
