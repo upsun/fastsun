@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watchEffect, nextTick, type PropType } from 'vue';
+import { computed, ref, nextTick, type PropType } from 'vue';
 import { useToast } from 'primevue/usetoast';
 import DataTable, {
   type DataTableRowEditSaveEvent,
@@ -42,6 +42,8 @@ const ip_selected = ref<AclItemEntity>();
 const deleteIpDialog = ref<boolean>(false);
 const editingRows = ref([]);
 const editSnapshots = ref<Record<string, AclItemEntity>>({});
+// Rows added via Add that haven't been committed via their own checkmark yet; cancelling one discards it entirely.
+const newRowIds = ref<Set<string>>(new Set());
 const idCounter = ref<number>(-1);
 const DEFAULT_NEW_IP = '8.8.8.8';
 const DEFAULT_NEW_SUBNET = '32';
@@ -66,6 +68,10 @@ const originalName = ref<string>('');
 function refresh() {
   console.log('FastSun > Load ACL: ' + props.acl_data!.id);
 
+  newRowIds.value = new Set();
+  editSnapshots.value = {};
+  entryErrors.value = {};
+
   if (props.acl_data === undefined || Object.keys(props.acl_data).length === 0) {
     headerTitle.value = 'Add ACL';
     originalName.value = '';
@@ -75,7 +81,10 @@ function refresh() {
     originalName.value = props.acl_data.name;
   }
 }
-watchEffect(refresh);
+// Run once per dialog open (the component is remounted via v-if each time), not reactively:
+// acl_data.name/entries are mutated in place by the form, and a watchEffect would re-run on
+// every keystroke, wiping entries.value back to the original and making rename undetectable.
+refresh();
 
 // Events
 function closeModal(updated = false) {
@@ -141,7 +150,11 @@ function onRowEditSave(event: DataTableRowEditSaveEvent) {
   if (error) {
     toast.add({ severity: 'error', summary: 'Invalid entry', detail: error, life: 5000 });
     editingRows.value = [...editingRows.value, target as never];
+    return;
   }
+
+  // Row committed successfully: a later Cancel should restore it, not discard it.
+  newRowIds.value.delete(String(target.id));
 }
 
 // Snapshot the pristine values before editing starts, so a Cancel can restore them.
@@ -150,12 +163,14 @@ function onRowEditInit(event: DataTableRowEditInitEvent) {
   editSnapshots.value[data.id] = { ...data };
 }
 
-// New rows that were never saved are discarded entirely; existing rows revert to their snapshot.
+// Rows never committed via their checkmark are discarded entirely; everything else
+// (including a committed new row reopened for a further edit) reverts to its snapshot.
 function onRowEditCancel(event: DataTableRowEditCancelEvent) {
   const { data } = event;
 
-  if (data.op === 'create') {
+  if (newRowIds.value.has(String(data.id))) {
     entries.value = entries.value.filter((entrie) => entrie.id !== data.id);
+    newRowIds.value.delete(String(data.id));
   } else {
     const target = entries.value.find((entrie) => entrie.id === data.id);
     const snapshot = editSnapshots.value[data.id];
@@ -292,6 +307,13 @@ async function updateAclEntries() {
     // Call API for entry https://www.fastly.com/documentation/reference/api/acls/acl-entry/#bulk-update-acl-entries
     if (updated.length > 0) {
       await aclApi.updateAclEntry(props.acl_data!.id, updated);
+
+      // Mark these as persisted so that if the rename step below fails and the user retries,
+      // these entries aren't resent (which Fastly would reject as duplicates, masking the real error).
+      const persistedIds = new Set(updated.map((entrie) => entrie.id));
+      entries.value = entries.value
+        .filter((entrie) => !(persistedIds.has(entrie.id) && entrie.op === 'delete'))
+        .map((entrie) => (persistedIds.has(entrie.id) ? { ...entrie, op: '' } : entrie));
     }
 
     // Renaming the ACL itself is a versioned VCL change, same as create/delete.
@@ -306,6 +328,7 @@ async function updateAclEntries() {
 
       credentialsStore.setVclVersion(parseInt(newVersion.number));
       eventBus.emit(EventType.VCL_VERSION_CHANGED, parseInt(newVersion.number));
+      originalName.value = newName;
     }
 
     closeModal(true);
@@ -326,8 +349,9 @@ async function updateAclEntries() {
 }
 
 function addIp() {
+  const id = idCounter.value--;
   const newRow = {
-    id: idCounter.value--,
+    id,
     ip: DEFAULT_NEW_IP,
     subnet: DEFAULT_NEW_SUBNET,
     comment: 'Add by FastSun',
@@ -335,6 +359,18 @@ function addIp() {
   } as never;
   entries.value.unshift(newRow);
   editingRows.value = [...editingRows.value, newRow];
+  newRowIds.value.add(String(id));
+}
+
+// Reads straight from the real entries record (not PrimeVue's per-column clone), so an
+// auto CIDR-split in one column (e.g. ip) is immediately reflected in another (e.g. subnet).
+function getEntryField(id: string, field: string): string {
+  const target = entries.value.find((entrie: AclItemEntity) => entrie.id === id);
+  if (!target) {
+    return '';
+  }
+  const value = (target as unknown as Record<string, unknown>)[field];
+  return value === null || value === undefined ? '' : String(value);
 }
 
 // Writes every keystroke straight into entries.value (bypassing PrimeVue's row-edit clone),
@@ -362,10 +398,20 @@ function syncField(id: string, field: string, value: string) {
   delete entryErrors.value[id];
 }
 
-// Format check plus duplicate check against every other currently displayed row.
+function subnetKey(entrie: AclItemEntity): string {
+  return entrie.subnet === null || entrie.subnet === undefined ? '' : String(entrie.subnet).trim();
+}
+
+// Format + duplicate check, only for rows actually being created/updated. Pre-existing,
+// untouched rows (e.g. IPv6 entries, or ones with no explicit subnet) are already valid in
+// Fastly as-is and must not block saving the rest of the ACL.
 function computeEntryError(entrie: AclItemEntity, all: AclItemEntity[]): string | null {
+  if (!entrie.op) {
+    return null;
+  }
+
   const ip = (entrie.ip ?? '').trim();
-  const subnet = String(entrie.subnet ?? '').trim();
+  const subnet = subnetKey(entrie);
 
   if (!IPV4_REGEX.test(ip)) {
     return `Invalid IP address: "${entrie.ip}"`;
@@ -377,9 +423,7 @@ function computeEntryError(entrie: AclItemEntity, all: AclItemEntity[]): string 
   }
 
   const key = `${ip}/${subnet}`;
-  const isDuplicate = all.some(
-    (other) => other.id !== entrie.id && `${(other.ip ?? '').trim()}/${String(other.subnet ?? '').trim()}` === key,
-  );
+  const isDuplicate = all.some((other) => other.id !== entrie.id && `${(other.ip ?? '').trim()}/${subnetKey(other)}` === key);
 
   return isDuplicate ? `Duplicate entry: "${key}" is already used by another row` : null;
 }
@@ -528,13 +572,8 @@ function focusNameInput() {
           </template>
           <template #editor="{ data, field }">
             <InputText
-              :modelValue="data[field]"
-              @update:modelValue="
-                (v) => {
-                  data[field] = v;
-                  syncField(data.id, field, String(v));
-                }
-              "
+              :modelValue="getEntryField(data.id, field)"
+              @update:modelValue="(v) => syncField(data.id, field, String(v))"
               :invalid="!!entryErrors[data.id]"
               placeholder="e.g. 192.0.2.0 or 192.0.2.0/24"
               fluid
@@ -544,13 +583,8 @@ function focusNameInput() {
         <Column field="subnet" header="Subnet" sortable style="width: 25%">
           <template #editor="{ data, field }">
             <InputText
-              :modelValue="data[field]"
-              @update:modelValue="
-                (v) => {
-                  data[field] = v;
-                  syncField(data.id, field, String(v));
-                }
-              "
+              :modelValue="getEntryField(data.id, field)"
+              @update:modelValue="(v) => syncField(data.id, field, String(v))"
               :invalid="!!entryErrors[data.id]"
               fluid
             />
@@ -559,13 +593,8 @@ function focusNameInput() {
         <Column field="comment" header="Comment" sortable>
           <template #editor="{ data, field }">
             <InputText
-              :modelValue="data[field]"
-              @update:modelValue="
-                (v) => {
-                  data[field] = v;
-                  syncField(data.id, field, String(v));
-                }
-              "
+              :modelValue="getEntryField(data.id, field)"
+              @update:modelValue="(v) => syncField(data.id, field, String(v))"
               fluid
             />
           </template>
