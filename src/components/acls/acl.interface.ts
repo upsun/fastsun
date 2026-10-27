@@ -2,7 +2,8 @@ import type Identifiable from '@/components/base/type';
 
 export default interface AclItemEntity extends Identifiable {
   ip: string;
-  subnet: number;
+  /** Fastly expects an integer CIDR prefix length (0-32); form inputs hold it as a string until save. */
+  subnet: number | string;
   comment: string;
   op: string;
 }

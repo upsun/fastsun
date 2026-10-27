@@ -1,7 +1,11 @@
 <script setup lang="ts">
-import { computed, ref, toRaw, watchEffect, nextTick, type PropType } from 'vue';
+import { computed, ref, watchEffect, nextTick, type PropType } from 'vue';
 import { useToast } from 'primevue/usetoast';
-import DataTable, { type DataTableRowEditSaveEvent } from 'primevue/datatable';
+import DataTable, {
+  type DataTableRowEditSaveEvent,
+  type DataTableRowEditInitEvent,
+  type DataTableRowEditCancelEvent,
+} from 'primevue/datatable';
 import Column from 'primevue/column';
 import Dialog from 'primevue/dialog';
 import InputText from 'primevue/inputtext';
@@ -37,7 +41,10 @@ const entries = ref<AclItemEntity[]>([]);
 const ip_selected = ref<AclItemEntity>();
 const deleteIpDialog = ref<boolean>(false);
 const editingRows = ref([]);
+const editSnapshots = ref<Record<string, AclItemEntity>>({});
 const idCounter = ref<number>(-1);
+const DEFAULT_NEW_IP = '8.8.8.8';
+const DEFAULT_NEW_SUBNET = '32';
 
 // Dynamic name validation
 const nameInputRef = ref<HTMLInputElement>();
@@ -45,18 +52,27 @@ const nameError = ref<string>('');
 const isNameValid = ref<boolean>(true);
 const isSaving = ref<boolean>(false);
 
+// IP/subnet validation and persistent (non-toast) error feedback
+const IPV4_REGEX = /^(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}$/;
+const entryErrors = ref<Record<string, string>>({});
+const formError = ref<string>('');
+
 // We need to retrieve the current VCL version from the credentialsStore
 const currentVclVersion = credentialsStore.getVclVersion();
 
 const localStore = new LocalStore();
+// Name as loaded from the API, kept so a rename can be detected (the input mutates acl_data.name directly).
+const originalName = ref<string>('');
 function refresh() {
   console.log('FastSun > Load ACL: ' + props.acl_data!.id);
 
   if (props.acl_data === undefined || Object.keys(props.acl_data).length === 0) {
     headerTitle.value = 'Add ACL';
+    originalName.value = '';
   } else {
     headerTitle.value = 'Edit ACL';
     entries.value = JSON.parse(JSON.stringify(props.acl_data.entries));
+    originalName.value = props.acl_data.name;
   }
 }
 watchEffect(refresh);
@@ -74,29 +90,106 @@ function closeIpDeleteModal() {
   ip_selected.value = {} as AclItemEntity;
 }
 
-function isEdited(oldData: AclItemEntity, newData: AclItemEntity): boolean {
-  return oldData.ip != newData.ip || oldData.subnet != newData.subnet || oldData.comment != newData.comment;
+// Fastly returns useful detail in the response body (e.g. duplicate entry), which axios'
+// generic error.message ("Request failed with status code 400") never surfaces on its own.
+function extractErrorMessage(error: unknown): string {
+  const axiosError = error as { message?: string; response?: { status?: number; data?: unknown } };
+  const status = axiosError?.response?.status;
+  const data = axiosError?.response?.data;
+
+  let detail = '';
+  if (data && typeof data === 'object') {
+    const d = data as Record<string, unknown>;
+    if (typeof d.detail === 'string') {
+      detail = d.detail;
+    } else if (typeof d.msg === 'string') {
+      detail = d.msg;
+    } else if (typeof d.message === 'string') {
+      detail = d.message;
+    } else if (Array.isArray(d.errors)) {
+      detail = d.errors.map((e) => (typeof e === 'string' ? e : JSON.stringify(e))).join('; ');
+    } else {
+      detail = JSON.stringify(data);
+    }
+  } else if (typeof data === 'string' && data.trim() !== '') {
+    detail = data;
+  }
+
+  const base = axiosError?.message || String(error);
+  if (status && detail) {
+    return `${base} (HTTP ${status}): ${detail}`;
+  }
+  return detail || base;
 }
 
+// Entries are kept in sync directly via syncField(); this marks the row dirty and rejects the
+// commit (reopening it for editing) if it's invalid or a duplicate of another row.
 function onRowEditSave(event: DataTableRowEditSaveEvent) {
-  const { data, newData, index } = event;
+  const { data } = event;
+  const target = entries.value.find((entrie) => entrie.id === data.id);
+  if (!target) {
+    return;
+  }
 
-  if (isEdited(data, newData)) {
-    entries.value[index] = newData;
+  if (target.op == undefined || target.op == '') {
+    target.op = 'update';
+  }
 
-    if (data.op == undefined || data.op == '') {
-      newData.op = 'update';
+  validateEntries();
+
+  const error = entryErrors.value[target.id];
+  if (error) {
+    toast.add({ severity: 'error', summary: 'Invalid entry', detail: error, life: 5000 });
+    editingRows.value = [...editingRows.value, target as never];
+  }
+}
+
+// Snapshot the pristine values before editing starts, so a Cancel can restore them.
+function onRowEditInit(event: DataTableRowEditInitEvent) {
+  const { data } = event;
+  editSnapshots.value[data.id] = { ...data };
+}
+
+// New rows that were never saved are discarded entirely; existing rows revert to their snapshot.
+function onRowEditCancel(event: DataTableRowEditCancelEvent) {
+  const { data } = event;
+
+  if (data.op === 'create') {
+    entries.value = entries.value.filter((entrie) => entrie.id !== data.id);
+  } else {
+    const target = entries.value.find((entrie) => entrie.id === data.id);
+    const snapshot = editSnapshots.value[data.id];
+    if (target && snapshot) {
+      target.ip = snapshot.ip;
+      target.subnet = snapshot.subnet;
+      target.comment = snapshot.comment;
+      target.op = snapshot.op;
     }
   }
+
+  delete entryErrors.value[data.id];
+  delete editSnapshots.value[data.id];
 }
 
 async function saveACL() {
   console.log('FastSun > Save ACL: ' + props.acl_data!.id);
   submitted.value = true;
+  formError.value = '';
 
   // Dynamic name validation
   if (!validateName()) {
+    formError.value = 'Please fix the errors in the form before saving.';
+    toast.add({ severity: 'error', summary: 'Invalid name', detail: formError.value, life: 5000 });
     focusNameInput();
+    return;
+  }
+
+  if (!validateEntries()) {
+    const firstError = Object.values(entryErrors.value)[0];
+    formError.value = firstError
+      ? `${firstError}. Please correct the highlighted rows.`
+      : 'One or more IP/subnet entries are invalid. Please correct the highlighted rows.';
+    toast.add({ severity: 'error', summary: 'Invalid IP entries', detail: formError.value, life: 5000 });
     return;
   }
 
@@ -129,12 +222,10 @@ async function createNewAcl() {
     console.log('FastSun > New ACL created:', newAcl.id);
 
     // Step 3: Update the entries if there are any
-    const updated = entries.value.filter((entrie: AclItemEntity) => {
-      return entrie.op != undefined && entrie.op != '';
-    });
+    const updated = getPendingEntries();
 
     if (updated.length > 0) {
-      await aclService.updateAclEntry(newAcl.id, toRaw(updated));
+      await aclService.updateAclEntry(newAcl.id, updated);
       console.log('FastSun > ACL entries updated');
     }
 
@@ -160,10 +251,12 @@ async function createNewAcl() {
     });
   } catch (error) {
     console.error('Error creating ACL:', error);
+    const message = extractErrorMessage(error);
+    formError.value = message;
     toast.add({
       severity: 'error',
       summary: 'Error Creating ACL',
-      detail: error instanceof Error ? error.message : String(error),
+      detail: message,
       life: 5000,
     });
   } finally {
@@ -171,56 +264,141 @@ async function createNewAcl() {
   }
 }
 
-function updateAclEntries() {
+// Entries marked create/update, with subnet normalized to a number for the Fastly API.
+function getPendingEntries(): AclItemEntity[] {
+  return entries.value
+    .filter((entrie: AclItemEntity) => entrie.op != undefined && entrie.op != '')
+    .map((entrie: AclItemEntity) => ({ ...entrie, subnet: Number(entrie.subnet) }));
+}
+
+async function updateAclEntries() {
   console.log('FastSun > Save ACL entries: ' + props.acl_data!.id);
 
-  // Only item to update
-  const updated = entries.value.filter((entrie: AclItemEntity) => {
-    return entrie.op != undefined && entrie.op != '';
-  });
+  const updated = getPendingEntries();
+  const newName = props.acl_data!.name.trim();
+  const nameChanged = newName !== originalName.value;
 
-  // Call API for entry https://www.fastly.com/documentation/reference/api/acls/acl-entry/#bulk-update-acl-entries
-  if (updated.length > 0) {
-    const aclApi = new AclAPIService(props.acl_data!.service_id, credentialsStore.getServiceToken());
-
-    aclApi
-      .updateAclEntry(props.acl_data!.id, toRaw(updated))
-      .then(() => {
-        closeModal(true);
-        toast.add({
-          severity: 'success',
-          summary: 'ACL saved!',
-          detail: 'ACL entries updated successfully',
-          life: 5000,
-        });
-      })
-      .catch((error) => {
-        console.error('Error updating ACL entries:', error);
-        toast.add({ severity: 'error', summary: 'Error updating ACL', detail: error.message || error, life: 5000 });
-      });
-  } else {
-    // No entries to update, just close
+  if (updated.length === 0 && !nameChanged) {
+    // Nothing to update, just close
     closeModal(true);
     toast.add({ severity: 'success', summary: 'ACL saved!', detail: 'ACL configuration saved', life: 5000 });
+    return;
+  }
+
+  isSaving.value = true;
+  try {
+    const aclApi = new AclAPIService(props.acl_data!.service_id, credentialsStore.getServiceToken());
+
+    // Call API for entry https://www.fastly.com/documentation/reference/api/acls/acl-entry/#bulk-update-acl-entries
+    if (updated.length > 0) {
+      await aclApi.updateAclEntry(props.acl_data!.id, updated);
+    }
+
+    // Renaming the ACL itself is a versioned VCL change, same as create/delete.
+    // https://www.fastly.com/documentation/reference/api/acls/acl/
+    if (nameChanged) {
+      const vclService = new VclAPIService(credentialsStore.getServiceId(), credentialsStore.getServiceToken());
+      const newVersion = await vclService.cloneVersion(currentVclVersion.toString());
+
+      await aclApi.updateACL(parseInt(newVersion.number), originalName.value, newName);
+      await vclService.validate(newVersion.number);
+      await vclService.activate(newVersion.number);
+
+      credentialsStore.setVclVersion(parseInt(newVersion.number));
+      eventBus.emit(EventType.VCL_VERSION_CHANGED, parseInt(newVersion.number));
+    }
+
+    closeModal(true);
+    toast.add({
+      severity: 'success',
+      summary: 'ACL saved!',
+      detail: nameChanged ? `ACL renamed to "${newName}" and entries updated` : 'ACL entries updated successfully',
+      life: 5000,
+    });
+  } catch (error) {
+    console.error('Error updating ACL:', error);
+    const message = extractErrorMessage(error);
+    formError.value = message;
+    toast.add({ severity: 'error', summary: 'Error updating ACL', detail: message, life: 5000 });
+  } finally {
+    isSaving.value = false;
   }
 }
 
 function addIp() {
-  const finded = entries.value.find((entrie: AclItemEntity) => {
-    return entrie.ip == '0.0.0.0';
-  });
+  const newRow = {
+    id: idCounter.value--,
+    ip: DEFAULT_NEW_IP,
+    subnet: DEFAULT_NEW_SUBNET,
+    comment: 'Add by FastSun',
+    op: 'create',
+  } as never;
+  entries.value.unshift(newRow);
+  editingRows.value = [...editingRows.value, newRow];
+}
 
-  if (!finded) {
-    const newRow = {
-      id: idCounter.value--,
-      ip: '8.8.8.8',
-      subnet: '32',
-      comment: 'Add by FastSun',
-      op: 'create',
-    } as never;
-    entries.value.unshift(newRow);
-    editingRows.value = [...editingRows.value, newRow];
+// Writes every keystroke straight into entries.value (bypassing PrimeVue's row-edit clone),
+// so edits aren't lost if the user saves the dialog without clicking each row's own checkmark.
+function syncField(id: string, field: string, value: string) {
+  const target = entries.value.find((entrie: AclItemEntity) => entrie.id === id);
+  if (!target) {
+    return;
   }
+
+  if (field === 'ip' && value.includes('/')) {
+    const [ipPart = '', subnetPart] = value.split('/');
+    target.ip = ipPart.trim();
+    if (subnetPart !== undefined && subnetPart.trim() !== '') {
+      target.subnet = subnetPart.trim();
+    }
+  } else if (field === 'ip' || field === 'subnet' || field === 'comment') {
+    target[field] = value;
+  }
+
+  if (target.op == undefined || target.op == '') {
+    target.op = 'update';
+  }
+
+  delete entryErrors.value[id];
+}
+
+// Format check plus duplicate check against every other currently displayed row.
+function computeEntryError(entrie: AclItemEntity, all: AclItemEntity[]): string | null {
+  const ip = (entrie.ip ?? '').trim();
+  const subnet = String(entrie.subnet ?? '').trim();
+
+  if (!IPV4_REGEX.test(ip)) {
+    return `Invalid IP address: "${entrie.ip}"`;
+  }
+
+  const subnetNum = Number(subnet);
+  if (subnet === '' || !Number.isInteger(subnetNum) || subnetNum < 0 || subnetNum > 32) {
+    return `Invalid subnet prefix: "${entrie.subnet}" (must be 0-32)`;
+  }
+
+  const key = `${ip}/${subnet}`;
+  const isDuplicate = all.some(
+    (other) => other.id !== entrie.id && `${(other.ip ?? '').trim()}/${String(other.subnet ?? '').trim()}` === key,
+  );
+
+  return isDuplicate ? `Duplicate entry: "${key}" is already used by another row` : null;
+}
+
+// Recomputes errors for every row (format + duplicates) so fixing one row also clears a stale
+// duplicate flag on whichever other row it used to conflict with.
+function validateEntries(): boolean {
+  entryErrors.value = {};
+  let valid = true;
+
+  for (const entrie of displayEntries.value) {
+    const error = computeEntryError(entrie, displayEntries.value);
+    if (error) {
+      entryErrors.value[entrie.id] = error;
+      valid = false;
+    }
+  }
+
+  return valid;
 }
 
 function confirmDeleteAclEntry(index: number) {
@@ -293,6 +471,9 @@ function focusNameInput() {
     v-bind:header="headerTitle"
     :modal="true"
   >
+    <div v-if="formError" class="border border-red-500 bg-red-50 text-red-700 rounded p-3 mb-3">
+      {{ formError }}
+    </div>
     <div>
       <label for="name" class="block font-bold mb-3">Name</label>
       <InputText
@@ -322,7 +503,9 @@ function focusNameInput() {
         scrollHeight="400px"
         editMode="row"
         v-model:editingRows="editingRows"
+        @row-edit-init="onRowEditInit"
         @row-edit-save="onRowEditSave"
+        @row-edit-cancel="onRowEditCancel"
       >
         <template #empty> No IPs defined. </template>
         <template #loading> Loading IPs data. Please wait...</template>
@@ -340,18 +523,51 @@ function focusNameInput() {
           </div>
         </template>
         <Column field="ip" header="IP" sortable>
+          <template #body="{ data }">
+            <span :class="{ 'text-red-500': entryErrors[data.id] }" :title="entryErrors[data.id]">{{ data.ip }}</span>
+          </template>
           <template #editor="{ data, field }">
-            <InputText v-model="data[field]" fluid />
+            <InputText
+              :modelValue="data[field]"
+              @update:modelValue="
+                (v) => {
+                  data[field] = v;
+                  syncField(data.id, field, String(v));
+                }
+              "
+              :invalid="!!entryErrors[data.id]"
+              placeholder="e.g. 192.0.2.0 or 192.0.2.0/24"
+              fluid
+            />
           </template>
         </Column>
         <Column field="subnet" header="Subnet" sortable style="width: 25%">
           <template #editor="{ data, field }">
-            <InputText v-model="data[field]" fluid />
+            <InputText
+              :modelValue="data[field]"
+              @update:modelValue="
+                (v) => {
+                  data[field] = v;
+                  syncField(data.id, field, String(v));
+                }
+              "
+              :invalid="!!entryErrors[data.id]"
+              fluid
+            />
           </template>
         </Column>
         <Column field="comment" header="Comment" sortable>
           <template #editor="{ data, field }">
-            <InputText v-model="data[field]" fluid />
+            <InputText
+              :modelValue="data[field]"
+              @update:modelValue="
+                (v) => {
+                  data[field] = v;
+                  syncField(data.id, field, String(v));
+                }
+              "
+              fluid
+            />
           </template>
         </Column>
         <Column :exportable="false" style="min-width: 8rem" header="Actions">
@@ -365,6 +581,10 @@ function focusNameInput() {
           </template>
         </Column>
       </DataTable>
+      <small class="text-gray-500 text-sm mt-1 block">
+        Tip: paste a CIDR address (e.g. 192.0.2.0/24) into the IP field and it will split automatically into IP and
+        Subnet.
+      </small>
     </div>
     <template #footer v-if="!isSaving">
       <Button label="Cancel" icon="pi pi-times" text @click="closeModal(false)" />
